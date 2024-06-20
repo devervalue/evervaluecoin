@@ -18,6 +18,9 @@ contract EVAMarket is Ownable2Step {
     /// @notice The market token used for buying and selling eva
     IERC20 private immutable marketToken;
 
+    /// @notice the marketToken decimals to normalize the amount
+    uint256 public immutable marketTokenDecimals;
+
     /// @notice The current price of 100 EVA tokens in the market token
     uint256 public marketTokenPer100Eva;
 
@@ -43,7 +46,8 @@ contract EVAMarket is Ownable2Step {
         address _addrEva,
         address _addrMarketToken,
         uint256 _marketTokenPer100Eva,
-        uint256 _fee
+        uint256 _fee,
+        uint256 _marketTokenDecimals
     ) Ownable(msg.sender) {
         require(_addrEva != address(0), "Cannot set EVA to zero address");
         require(
@@ -58,6 +62,7 @@ contract EVAMarket is Ownable2Step {
 
         marketTokenPer100Eva = _marketTokenPer100Eva;
         fee = _fee;
+        marketTokenDecimals = _marketTokenDecimals;
     }
 
     /// @notice Allows a user to buy EVA tokens with market tokens
@@ -68,7 +73,15 @@ contract EVAMarket is Ownable2Step {
             "User doesn't have enough balance"
         );
 
-        uint256 evaToUser = (amount * 100) / marketTokenPer100Eva;
+        // Normalize the amount based on the decimals of the tokens
+        uint256 evaDecimals = eva.decimals();
+        uint256 normalizedAmount = normalizeAmount(
+            amount,
+            marketTokenDecimals,
+            evaDecimals
+        );
+
+        uint256 evaToUser = (normalizedAmount * 100) / marketTokenPer100Eva;
         require(evaToUser > 0, "Amount too small");
         require(
             evaToUser <= eva.balanceOf(address(this)),
@@ -89,8 +102,17 @@ contract EVAMarket is Ownable2Step {
             "User doesn't have enough EVA"
         );
 
-        uint256 marketTokenToTransfer = (((amount * marketTokenPer100Eva) /
-            100) * (1000 - fee)) / 1000;
+        // Normalize the amount based on the decimals of the tokens
+        uint256 evaDecimals = eva.decimals();
+
+        uint256 normalizedAmount = normalizeAmount(
+            amount,
+            evaDecimals,
+            marketTokenDecimals
+        );
+
+        uint256 marketTokenToTransfer = (((normalizedAmount *
+            marketTokenPer100Eva) / 100) * (1000 - fee)) / 1000;
         require(
             marketTokenToTransfer <= marketToken.balanceOf(address(this)),
             "Market doesn't have enough balance"
@@ -123,5 +145,24 @@ contract EVAMarket is Ownable2Step {
 
         eva.safeTransfer(this.owner(), balanceEva);
         marketToken.safeTransfer(this.owner(), balanceMarketToken);
+    }
+
+    /// @notice Normalizes the amount based on the token decimals
+    /// @param amount The original amount
+    /// @param fromDecimals The decimals of the token being converted from
+    /// @param toDecimals The decimals of the token being converted to
+    /// @return The normalized amount
+    function normalizeAmount(
+        uint256 amount,
+        uint256 fromDecimals,
+        uint256 toDecimals
+    ) private pure returns (uint256) {
+        if (fromDecimals == toDecimals) {
+            return amount;
+        } else if (fromDecimals > toDecimals) {
+            return amount / (10 ** (fromDecimals - toDecimals));
+        } else {
+            return amount * (10 ** (toDecimals - fromDecimals));
+        }
     }
 }

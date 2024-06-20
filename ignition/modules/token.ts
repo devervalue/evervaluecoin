@@ -7,7 +7,9 @@ const erc20Module = buildModule("Token", (m) => {
     "totalSupply",
     BigInt(21000000000) * BigInt(10) ** BigInt(18)
   );
-  const erc20 = m.contract("Token", [totalSupply, name, symbol], {});
+
+  const decimals = m.getParameter("decimals", 18);
+  const erc20 = m.contract("Token", [totalSupply, name, symbol, decimals], {});
 
   return { erc20 };
 });

@@ -7,15 +7,17 @@ const evaMarketModule = buildModule("evaMarketModule", (m) => {
     "addrMarketToken",
     "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9" //Arbitrum USDT
   );
+
+  const marketTokenDecimals = m.getParameter("marketTokenDecimals", 18);
   const addrNewOwner = m.getParameter(
     "owner",
-    "0xba8307396eD8B503Ad49fff4f28d65D5eb36677A" //Arbitrum admin wallet
+    "0x91962f8404692DFf6898624831D332793036485C" //Arbitrum admin wallet
   );
   const marketTokenPer100Eva = 35;
   const fee = 10;
   const evaMarket = m.contract(
     "EVAMarket",
-    [addrEva, addrMarketToken, marketTokenPer100Eva, fee],
+    [addrEva, addrMarketToken, marketTokenPer100Eva, fee, marketTokenDecimals],
     {}
   );
   m.call(evaMarket, "transferOwnership", [addrNewOwner], {});

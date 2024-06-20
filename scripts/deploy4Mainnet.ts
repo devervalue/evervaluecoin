@@ -19,6 +19,7 @@ async function main() {
     parameters: {
       evaMarketModule: {
         addrEva: addrEva,
+        marketTokenDecimals: 6,
       },
     },
   });
@@ -46,6 +47,7 @@ async function main() {
       "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
       35,
       10,
+      6,
     ], // USDT address and other parameters
   });
 

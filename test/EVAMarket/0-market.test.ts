@@ -7,6 +7,19 @@ import evaModule from "../../ignition/modules/EverValueCoin";
 import evaMarketModule from "../../ignition/modules/EVAMarket";
 const { expect } = chai;
 
+function normalizeAmount(
+  amount: bigint,
+  fromDecimals: bigint,
+  toDecimals: bigint
+) {
+  if (fromDecimals == toDecimals) {
+    return amount;
+  } else if (fromDecimals > toDecimals) {
+    return amount / 10n ** (fromDecimals - toDecimals);
+  } else {
+    return amount * 10n ** (toDecimals - fromDecimals);
+  }
+}
 describe("Market", function () {
   let eva: EverValueCoin;
   let wbtc: Token;
@@ -52,6 +65,7 @@ describe("Market", function () {
             addrEva: addrEva,
             addrMarketToken: addrUsdt,
             owner: owner.address,
+            marketTokenDecimals: 18,
           },
         },
       })
@@ -95,13 +109,13 @@ describe("Market", function () {
     await usdt.connect(user).approve(market.getAddress(), 100000);
 
     const usdtToSend = 1000n;
-    const expectedAmtToRecive =
+    const expectedEvaToRecive =
       (usdtToSend * 100n) / (await market.marketTokenPer100Eva());
 
     await expect(market.connect(user).buy(usdtToSend)).to.changeTokenBalances(
       eva,
       [user.address, await market.getAddress()],
-      [expectedAmtToRecive, -expectedAmtToRecive]
+      [expectedEvaToRecive, -expectedEvaToRecive]
     );
     await expect(market.connect(user).buy(usdtToSend)).to.changeTokenBalances(
       usdt,
@@ -146,15 +160,13 @@ describe("Market", function () {
     await usdt.connect(user).approve(market.getAddress(), 100000);
 
     const usdtToSend = 1001n;
-    const expectedAmtToRecive =
-      (usdtToSend * 100n) / (await market.marketTokenPer100Eva());
 
     await market.setRate(ethers.parseEther("1000000000000000"));
     await expect(market.connect(user).buy(1)).to.revertedWith(
       "Amount too small"
     );
   });
-  it("User must not be able to buy more btt than the market balance", async function () {
+  it("User must not be able to buy more EVA than the market balance", async function () {
     const [owner, user] = await ethers.getSigners();
 
     //Send tokens to market to be able to execute exchanges
@@ -168,8 +180,6 @@ describe("Market", function () {
     await usdt.connect(user).approve(market.getAddress(), 100000);
 
     const usdtToSend = 1000n;
-    const expectedAmtToRecive =
-      (usdtToSend * 100n) / (await market.marketTokenPer100Eva());
 
     await expect(market.connect(user).buy(usdtToSend)).to.revertedWith(
       "Market doesn't have enough EVA"
@@ -190,12 +200,12 @@ describe("Market", function () {
     await usdt.connect(user).approve(market.getAddress(), 100000);
 
     const usdtToSend = 1000n;
-    const expectedAmtToRecive =
+    const expectedEvaToRecive =
       (usdtToSend * 100n) / (await market.marketTokenPer100Eva());
 
     await expect(market.connect(user).buy(usdtToSend))
       .to.emit(market, "userBought")
-      .withArgs(usdtToSend, expectedAmtToRecive);
+      .withArgs(usdtToSend, expectedEvaToRecive);
   });
 
   it("User should be able to sell at defined rate paying the fee", async function () {
@@ -207,21 +217,21 @@ describe("Market", function () {
     //Send tokens to user to be able to sell
     await eva.transfer(user.address, 10000);
 
-    //User approve amt to be expended by market
+    //User approve EVA to be expended by market
     await eva.connect(user).approve(market.getAddress(), 100000);
 
-    const amtToSend = 100n;
+    const evaToSend = 100n;
     const expectedUsdtToRecive =
-      (((amtToSend * 35n) / 100n) * (1000n - 10n)) / 1000n;
-    await expect(market.connect(user).sell(amtToSend)).to.changeTokenBalances(
+      (((evaToSend * 35n) / 100n) * (1000n - 10n)) / 1000n;
+    await expect(market.connect(user).sell(evaToSend)).to.changeTokenBalances(
       usdt,
       [user.address, await market.getAddress()],
       [expectedUsdtToRecive, -expectedUsdtToRecive]
     );
-    await expect(market.connect(user).sell(amtToSend)).to.changeTokenBalances(
+    await expect(market.connect(user).sell(evaToSend)).to.changeTokenBalances(
       eva,
       [user.address, owner.address],
-      [-amtToSend, amtToSend]
+      [-evaToSend, evaToSend]
     );
   });
 
@@ -234,7 +244,7 @@ describe("Market", function () {
     //Send tokens to user to be able to sell
     await eva.transfer(user.address, 10000);
 
-    //User approve amt to be expended by market
+    //User approve EVA to be expended by market
     await eva.connect(user).approve(market.getAddress(), 100000);
 
     const evaToSend = 10001n;
@@ -254,7 +264,7 @@ describe("Market", function () {
     //Send tokens to user to be able to sell
     await eva.transfer(user.address, 10000);
 
-    //User approve amt to be expended by market
+    //User approve EVA to be expended by market
     await eva.connect(user).approve(market.getAddress(), 100000);
 
     const evaToSend = 10000n;
@@ -273,7 +283,7 @@ describe("Market", function () {
     //Send tokens to user to be able to sell
     await eva.transfer(user.address, 10000);
 
-    //User approve amt to be expended by market
+    //User approve EVA to be expended by market
     await eva.connect(user).approve(market.getAddress(), 100000);
 
     const evaToSend = 100n;
@@ -317,5 +327,208 @@ describe("Market", function () {
     await expect(market.connect(user).withdrawAll())
       .to.revertedWithCustomError(market, "OwnableUnauthorizedAccount")
       .withArgs(user.address);
+  });
+
+  //Decimals normalization tests
+
+  it("Market should be able to perform BUY when marketToken decimals lesser than EVA decimals", async function () {
+    const [owner, user] = await ethers.getSigners();
+
+    const marketToken = (
+      await hre.ignition.deploy(erc20Module, {
+        parameters: {
+          erc20Module: {
+            name: "market token",
+            symbol: "MKT",
+            totalSupply: BigInt(1000000000) * BigInt(10) ** BigInt(18),
+            decimals: 6,
+          },
+        },
+      })
+    ).erc20 as unknown as Token;
+
+    const Market = await ethers.getContractFactory("EVAMarket");
+    const market = (await Market.deploy(
+      eva.getAddress(),
+      marketToken.getAddress(),
+      35,
+      10,
+      6
+    )) as unknown as EVAMarket;
+
+    //Send tokens to market to be able to execute exchanges
+    await marketToken.transfer(market.getAddress(), 1000000);
+    await eva.transfer(market.getAddress(), 2857142857142 * 2); //Border case emptying the market
+
+    //Send tokens to user to be able to buy
+    await marketToken.transfer(user.address, 2000);
+
+    //User approve usdt to be expended by market
+    await marketToken.connect(user).approve(market.getAddress(), 100000);
+
+    const marketTokenToSend = 1n;
+    const expectedEvaToRecive =
+      (normalizeAmount(marketTokenToSend, 6n, 18n) * 100n) /
+      (await market.marketTokenPer100Eva());
+
+    await expect(
+      market.connect(user).buy(marketTokenToSend)
+    ).to.changeTokenBalances(
+      eva,
+      [user.address, await market.getAddress()],
+      [expectedEvaToRecive, -expectedEvaToRecive]
+    );
+  });
+
+  it("Market should be able to perform BUY when marketToken decimals greatter than EVA decimals", async function () {
+    const [owner, user] = await ethers.getSigners();
+
+    const marketToken = (
+      await hre.ignition.deploy(erc20Module, {
+        parameters: {
+          erc20Module: {
+            name: "market token",
+            symbol: "MKT",
+            totalSupply: BigInt(1000000000) * BigInt(10) ** BigInt(18),
+            decimals: 22,
+          },
+        },
+      })
+    ).erc20 as unknown as Token;
+
+    const Market = await ethers.getContractFactory("EVAMarket");
+    const market = (await Market.deploy(
+      eva.getAddress(),
+      marketToken.getAddress(),
+      35,
+      10,
+      22
+    )) as unknown as EVAMarket;
+
+    //Send tokens to market to be able to execute exchanges
+    await marketToken.transfer(market.getAddress(), 1000000);
+    await eva.transfer(market.getAddress(), 2857142857142 * 2); //Border case emptying the market
+
+    //Send tokens to user to be able to buy
+    await marketToken.transfer(user.address, 20000);
+
+    //User approve usdt to be expended by market
+    await marketToken.connect(user).approve(market.getAddress(), 100000);
+
+    const marketTokenToSend = 20000n;
+
+    const expectedEvaToRecive =
+      (normalizeAmount(marketTokenToSend, 22n, 18n) * 100n) /
+      (await market.marketTokenPer100Eva());
+
+    await expect(
+      market.connect(user).buy(marketTokenToSend)
+    ).to.changeTokenBalances(
+      eva,
+      [user.address, await market.getAddress()],
+      [expectedEvaToRecive, -expectedEvaToRecive]
+    );
+  });
+
+  it("Market should be able to perform SELL when marketToken decimals lesser than EVA decimals", async function () {
+    const [owner, user] = await ethers.getSigners();
+
+    const marketToken = (
+      await hre.ignition.deploy(erc20Module, {
+        parameters: {
+          erc20Module: {
+            name: "market token",
+            symbol: "MKT",
+            totalSupply: BigInt(1000000000) * BigInt(10) ** BigInt(18),
+            decimals: 6,
+          },
+        },
+      })
+    ).erc20 as unknown as Token;
+
+    const Market = await ethers.getContractFactory("EVAMarket");
+    const market = (await Market.deploy(
+      eva.getAddress(),
+      marketToken.getAddress(),
+      35,
+      10,
+      6
+    )) as unknown as EVAMarket;
+
+    //Send tokens to market to be able to execute exchanges
+    await marketToken.transfer(market.getAddress(), 1000000);
+    await eva.transfer(market.getAddress(), 1000000);
+
+    //Send tokens to user to be able to sell
+    await eva.transfer(user.address, 10000);
+
+    //User approve EVA to be expended by market
+    await eva.connect(user).approve(market.getAddress(), 100000);
+
+    const evaToSend = 100n;
+    const expectedUsdtToRecive =
+      (((normalizeAmount(evaToSend, 18n, 6n) * 35n) / 100n) * (1000n - 10n)) /
+      1000n;
+    await expect(market.connect(user).sell(evaToSend)).to.changeTokenBalances(
+      marketToken,
+      [user.address, await market.getAddress()],
+      [expectedUsdtToRecive, -expectedUsdtToRecive]
+    );
+    await expect(market.connect(user).sell(evaToSend)).to.changeTokenBalances(
+      eva,
+      [user.address, owner.address],
+      [-evaToSend, evaToSend]
+    );
+  });
+
+  it("Market should be able to perform SELL when marketToken decimals greatter than EVA decimals", async function () {
+    const [owner, user] = await ethers.getSigners();
+    const marketToken = (
+      await hre.ignition.deploy(erc20Module, {
+        parameters: {
+          erc20Module: {
+            name: "market token",
+            symbol: "MKT",
+            totalSupply: BigInt(1000000000) * BigInt(10) ** BigInt(18),
+            decimals: 22,
+          },
+        },
+      })
+    ).erc20 as unknown as Token;
+    marketToken.decimals();
+
+    const Market = await ethers.getContractFactory("EVAMarket");
+    const market = (await Market.deploy(
+      eva.getAddress(),
+      marketToken.getAddress(),
+      35,
+      10,
+      22
+    )) as unknown as EVAMarket;
+
+    //Send tokens to market to be able to execute exchanges
+    await marketToken.transfer(market.getAddress(), 1000000);
+    await eva.transfer(market.getAddress(), 1000000);
+
+    //Send tokens to user to be able to sell
+    await eva.transfer(user.address, 10000);
+
+    //User approve EVA to be expended by market
+    await eva.connect(user).approve(market.getAddress(), 100000);
+
+    const evaToSend = 100n;
+    const expectedUsdtToRecive =
+      (((normalizeAmount(evaToSend, 18n, 22n) * 35n) / 100n) * (1000n - 10n)) /
+      1000n;
+    await expect(market.connect(user).sell(evaToSend)).to.changeTokenBalances(
+      marketToken,
+      [user.address, await market.getAddress()],
+      [expectedUsdtToRecive, -expectedUsdtToRecive]
+    );
+    await expect(market.connect(user).sell(evaToSend)).to.changeTokenBalances(
+      eva,
+      [user.address, owner.address],
+      [-evaToSend, evaToSend]
+    );
   });
 });

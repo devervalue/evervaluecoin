@@ -44,7 +44,7 @@ describe("Market constructor fail requires", function () {
     const [owner] = await ethers.getSigners();
     const Market = await ethers.getContractFactory("EVAMarket");
     await expect(
-      Market.deploy(zeroAddress, usdt.getAddress(), 35, 10)
+      Market.deploy(zeroAddress, usdt.getAddress(), 35, 10, 6)
     ).to.revertedWith("Cannot set EVA to zero address");
   });
 
@@ -52,7 +52,7 @@ describe("Market constructor fail requires", function () {
     const [owner] = await ethers.getSigners();
     const Market = await ethers.getContractFactory("EVAMarket");
     await expect(
-      Market.deploy(eva.getAddress(), zeroAddress, 35, 10)
+      Market.deploy(eva.getAddress(), zeroAddress, 35, 10, 6)
     ).to.revertedWith("Cannot set market token to zero address");
   });
 
@@ -60,7 +60,7 @@ describe("Market constructor fail requires", function () {
     const [owner] = await ethers.getSigners();
     const Market = await ethers.getContractFactory("EVAMarket");
     await expect(
-      Market.deploy(eva.getAddress(), wbtc.getAddress(), 0, 10)
+      Market.deploy(eva.getAddress(), wbtc.getAddress(), 0, 10, 6)
     ).to.revertedWith("Rate must be greater than 0");
   });
 
@@ -68,7 +68,7 @@ describe("Market constructor fail requires", function () {
     const [owner] = await ethers.getSigners();
     const Market = await ethers.getContractFactory("EVAMarket");
     await expect(
-      Market.deploy(eva.getAddress(), wbtc.getAddress(), 35, 1001)
+      Market.deploy(eva.getAddress(), wbtc.getAddress(), 35, 1001, 6)
     ).to.revertedWith("Fee must be lesser than 1000");
   });
 });

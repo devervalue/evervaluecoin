@@ -46,6 +46,7 @@ async function main() {
         addrEva: addrEva,
         addrMarketToken: addrUsdt,
         owner: owner.address,
+        marketTokenDecimals: 18,
       },
     },
   });
