@@ -460,12 +460,13 @@ describe("Market", function () {
     await eva.transfer(market.getAddress(), 1000000);
 
     //Send tokens to user to be able to sell
-    await eva.transfer(user.address, 10000);
-
+    await eva.transfer(user.address, 1000000000000000n * 2n);
     //User approve EVA to be expended by market
-    await eva.connect(user).approve(market.getAddress(), 100000);
+    await eva
+      .connect(user)
+      .approve(market.getAddress(), "1000000000000000000000000");
 
-    const evaToSend = 100n;
+    const evaToSend = 1000000000000000n;
     const expectedUsdtToRecive =
       (((normalizeAmount(evaToSend, 18n, 6n) * 35n) / 100n) * (1000n - 10n)) /
       1000n;
@@ -481,6 +482,50 @@ describe("Market", function () {
     );
   });
 
+  it("Market should revert SELL when amount of marketToken to receive is zero", async function () {
+    const [owner, user] = await ethers.getSigners();
+
+    const marketToken = (
+      await hre.ignition.deploy(erc20Module, {
+        parameters: {
+          erc20Module: {
+            name: "market token",
+            symbol: "MKT",
+            totalSupply: BigInt(1000000000) * BigInt(10) ** BigInt(18),
+            decimals: 6,
+          },
+        },
+      })
+    ).erc20 as unknown as Token;
+
+    const Market = await ethers.getContractFactory("EVAMarket");
+    const market = (await Market.deploy(
+      eva.getAddress(),
+      marketToken.getAddress(),
+      35,
+      10,
+      6
+    )) as unknown as EVAMarket;
+
+    //Send tokens to market to be able to execute exchanges
+    await marketToken.transfer(market.getAddress(), 1000000);
+    await eva.transfer(market.getAddress(), 1000000);
+
+    //Send tokens to user to be able to sell
+    await eva.transfer(user.address, 1000000n * 2n);
+    //User approve EVA to be expended by market
+    await eva
+      .connect(user)
+      .approve(market.getAddress(), "1000000000000000000000000");
+
+    const evaToSend = 1000n;
+    const expectedUsdtToRecive =
+      (((normalizeAmount(evaToSend, 18n, 6n) * 35n) / 100n) * (1000n - 10n)) /
+      1000n;
+    await expect(market.connect(user).sell(evaToSend)).to.revertedWith(
+      "Amount too small"
+    );
+  });
   it("Market should be able to perform SELL when marketToken decimals greatter than EVA decimals", async function () {
     const [owner, user] = await ethers.getSigners();
     const marketToken = (

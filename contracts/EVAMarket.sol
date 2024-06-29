@@ -117,6 +117,7 @@ contract EVAMarket is Ownable2Step {
             marketTokenToTransfer <= marketToken.balanceOf(address(this)),
             "Market doesn't have enough balance"
         );
+        require(marketTokenToTransfer > 0, "Amount too small");
 
         eva.safeTransferFrom(msg.sender, this.owner(), amount);
         marketToken.safeTransfer(msg.sender, marketTokenToTransfer);
