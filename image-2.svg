@@ -1,126 +1,148 @@
 <?xml version="1.0" standalone="no"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="372pt" height="400pt" viewBox="0.00 0.00 371.50 400.00">
-<g id="graph0" class="graph" transform="translate(4,396) scale(1)" data-name="G">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="379pt" height="570pt" viewBox="0.00 0.00 378.65 570.00">
+<g id="graph0" class="graph" transform="translate(4,566) scale(1)" data-name="G">
 
-<polygon fill="#2e3e56" stroke="none" points="-4,4 -4,-396 367.5,-396 367.5,4 -4,4" style=""/>
-<g id="clust1" class="cluster" data-name="clusterEverValueCoin">
+<polygon fill="#2e3e56" stroke="none" points="-4,4 -4,-566 374.65,-566 374.65,4 -4,4" style=""/>
+<g id="clust1" class="cluster" data-name="clusterEVABurnVault">
 
-<path fill="#445773" stroke="#445773" d="M20,-8C20,-8 343.5,-8 343.5,-8 349.5,-8 355.5,-14 355.5,-20 355.5,-20 355.5,-235 355.5,-235 355.5,-241 349.5,-247 343.5,-247 343.5,-247 20,-247 20,-247 14,-247 8,-241 8,-235 8,-235 8,-20 8,-20 8,-14 14,-8 20,-8" style=""/>
-<text text-anchor="middle" x="181.75" y="-230.4" font-family="Times,serif" font-size="14.00" fill="#f0f0f0" style="">EverValueCoin</text>
+<path fill="#445773" stroke="#445773" d="M20,-286C20,-286 350.65,-286 350.65,-286 356.65,-286 362.65,-292 362.65,-298 362.65,-298 362.65,-405 362.65,-405 362.65,-411 356.65,-417 350.65,-417 350.65,-417 20,-417 20,-417 14,-417 8,-411 8,-405 8,-405 8,-298 8,-298 8,-292 14,-286 20,-286" style=""/>
+<text text-anchor="middle" x="185.32" y="-400.4" font-family="Times,serif" font-size="14.00" fill="#f0f0f0" style="">EVABurnVault</text>
 </g>
-<g id="clust2" class="cluster" data-name="cluster_01">
+<g id="clust2" class="cluster" data-name="clusterEverValueCoin">
 
-<polygon fill="#2e3e56" stroke="black" points="10.53,-255 10.53,-384 302.28,-384 302.28,-255 10.53,-255" style=""/>
-<text text-anchor="middle" x="156.4" y="-367.4" font-family="Times,serif" font-size="14.00" style="">Legend</text>
+<path fill="#3b4b63" stroke="#e8726d" stroke-dasharray="5,2" d="M231.98,-147C231.98,-147 335.11,-147 335.11,-147 341.11,-147 347.11,-153 347.11,-159 347.11,-159 347.11,-266 347.11,-266 347.11,-272 341.11,-278 335.11,-278 335.11,-278 231.98,-278 231.98,-278 225.98,-278 219.98,-272 219.98,-266 219.98,-266 219.98,-159 219.98,-159 219.98,-153 225.98,-147 231.98,-147" style=""/>
+<text text-anchor="middle" x="283.54" y="-261.4" font-family="Times,serif" font-size="14.00" fill="#f0f0f0" style="">EverValueCoin</text>
 </g>
-<!-- EverValueCoin.&lt;Constructor&gt; -->
-<g id="node1" class="node" pointer-events="visible" data-name="EverValueCoin.&lt;Constructor&gt;">
+<g id="clust3" class="cluster" data-name="clusterIERC20">
 
-<ellipse fill="#ff9797" stroke="#ff9797" stroke-width="3" cx="83.53" cy="-196" rx="67.55" ry="18" style=""/>
-<text text-anchor="middle" x="83.53" y="-191.8" font-family="Times,serif" font-size="14.00" style="">&lt;Constructor&gt;</text>
+<path fill="#3b4b63" stroke="#e8726d" stroke-dasharray="5,2" d="M228.26,-8C228.26,-8 338.83,-8 338.83,-8 344.83,-8 350.83,-14 350.83,-20 350.83,-20 350.83,-127 350.83,-127 350.83,-133 344.83,-139 338.83,-139 338.83,-139 228.26,-139 228.26,-139 222.26,-139 216.26,-133 216.26,-127 216.26,-127 216.26,-20 216.26,-20 216.26,-14 222.26,-8 228.26,-8" style=""/>
+<text text-anchor="middle" x="283.54" y="-122.4" font-family="Times,serif" font-size="14.00" fill="#f0f0f0" style="">IERC20</text>
 </g>
-<!-- EverValueCoin._mint -->
-<g id="node4" class="node" pointer-events="visible" data-name="EverValueCoin._mint">
+<g id="clust4" class="cluster" data-name="cluster_01">
 
-<ellipse fill="#edad56" stroke="#edad56" stroke-width="3" cx="267.28" cy="-196" rx="33.64" ry="18" style=""/>
-<text text-anchor="middle" x="267.28" y="-191.8" font-family="Times,serif" font-size="14.00" style="">_mint</text>
+<polygon fill="#2e3e56" stroke="black" points="23.22,-425 23.22,-554 318.54,-554 318.54,-425 23.22,-425" style=""/>
+<text text-anchor="middle" x="170.88" y="-537.4" font-family="Times,serif" font-size="14.00" style="">Legend</text>
 </g>
-<!-- EverValueCoin.&lt;Constructor&gt;&#45;&gt;EverValueCoin._mint -->
-<g id="edge1" class="edge" data-name="EverValueCoin.&lt;Constructor&gt;-&gt;EverValueCoin._mint">
+<!-- EVABurnVault.&lt;Constructor&gt; -->
+<g id="node1" class="node" pointer-events="visible" data-name="EVABurnVault.&lt;Constructor&gt;">
 
-<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M152.46,-196C174.79,-196 199.1,-196 219.5,-196" style=""/>
-<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="219.25,-199.5 229.25,-196 219.25,-192.5 219.25,-199.5" style=""/>
+<ellipse fill="#ff9797" stroke="#ff9797" stroke-width="3" cx="96.22" cy="-366" rx="67.55" ry="18" style=""/>
+<text text-anchor="middle" x="96.22" y="-361.8" font-family="Times,serif" font-size="14.00" style="">&lt;Constructor&gt;</text>
 </g>
-<!-- EverValueCoin.burn -->
-<g id="node2" class="node" pointer-events="visible" data-name="EverValueCoin.burn">
+<!-- EVABurnVault.EverValueCoin -->
+<g id="node3" class="node" pointer-events="visible" data-name="EVABurnVault.EverValueCoin">
 
-<ellipse fill="#ff9797" stroke="#ff9797" stroke-width="3" cx="83.53" cy="-142" rx="28.98" ry="18" style=""/>
-<text text-anchor="middle" x="83.53" y="-137.8" font-family="Times,serif" font-size="14.00" style="">burn</text>
+<ellipse fill="#edad56" stroke="#edad56" stroke-width="3" cx="283.54" cy="-312" rx="71.21" ry="18" style=""/>
+<text text-anchor="middle" x="283.54" y="-307.8" font-family="Times,serif" font-size="14.00" style="">EverValueCoin</text>
 </g>
-<!-- EverValueCoin._burn -->
-<g id="node5" class="node" pointer-events="visible" data-name="EverValueCoin._burn">
+<!-- EVABurnVault.&lt;Constructor&gt;&#45;&gt;EVABurnVault.EverValueCoin -->
+<g id="edge1" class="edge" data-name="EVABurnVault.&lt;Constructor&gt;-&gt;EVABurnVault.EverValueCoin">
 
-<ellipse fill="#edad56" stroke="#edad56" stroke-width="3" cx="267.28" cy="-88" rx="33.63" ry="18" style=""/>
-<text text-anchor="middle" x="267.28" y="-83.8" font-family="Times,serif" font-size="14.00" style="">_burn</text>
+<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M144.46,-352.23C167.86,-345.42 196.38,-337.11 221.42,-329.81" style=""/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="222.24,-333.22 230.86,-327.06 220.28,-326.5 222.24,-333.22" style=""/>
 </g>
-<!-- EverValueCoin.burn&#45;&gt;EverValueCoin._burn -->
-<g id="edge2" class="edge" data-name="EverValueCoin.burn-&gt;EverValueCoin._burn">
+<!-- EVABurnVault.IERC20 -->
+<g id="node4" class="node" pointer-events="visible" data-name="EVABurnVault.IERC20">
 
-<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M111.34,-134.03C141.07,-125.2 189.4,-110.84 224.18,-100.51" style=""/>
-<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="224.83,-103.97 233.42,-97.76 222.84,-97.26 224.83,-103.97" style=""/>
+<ellipse fill="#edad56" stroke="#edad56" stroke-width="3" cx="283.54" cy="-366" rx="42.88" ry="18" style=""/>
+<text text-anchor="middle" x="283.54" y="-361.8" font-family="Times,serif" font-size="14.00" style="">IERC20</text>
 </g>
-<!-- EverValueCoin._msgSender -->
-<g id="node6" class="node" pointer-events="visible" data-name="EverValueCoin._msgSender">
+<!-- EVABurnVault.&lt;Constructor&gt;&#45;&gt;EVABurnVault.IERC20 -->
+<g id="edge2" class="edge" data-name="EVABurnVault.&lt;Constructor&gt;-&gt;EVABurnVault.IERC20">
 
-<ellipse fill="#edad56" stroke="#edad56" stroke-width="3" cx="267.28" cy="-142" rx="58.56" ry="18" style=""/>
-<text text-anchor="middle" x="267.28" y="-137.8" font-family="Times,serif" font-size="14.00" style="">_msgSender</text>
+<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M165.18,-366C185.32,-366 207.14,-366 226.45,-366" style=""/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="226.33,-369.5 236.33,-366 226.33,-362.5 226.33,-369.5" style=""/>
 </g>
-<!-- EverValueCoin.burn&#45;&gt;EverValueCoin._msgSender -->
-<g id="edge3" class="edge" data-name="EverValueCoin.burn-&gt;EverValueCoin._msgSender">
+<!-- EVABurnVault.backingWithdraw -->
+<g id="node2" class="node" pointer-events="visible" data-name="EVABurnVault.backingWithdraw">
 
-<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M113.73,-142C135.57,-142 166.41,-142 194.65,-142" style=""/>
-<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="194.38,-145.5 204.38,-142 194.38,-138.5 194.38,-145.5" style=""/>
+<ellipse fill="#ff9797" stroke="#ff9797" stroke-width="3" cx="96.22" cy="-312" rx="80.44" ry="18" style=""/>
+<text text-anchor="middle" x="96.22" y="-307.8" font-family="Times,serif" font-size="14.00" style="">backingWithdraw</text>
+</g>
+<!-- EverValueCoin.totalSupply -->
+<g id="node5" class="node" pointer-events="visible" data-name="EverValueCoin.totalSupply">
+
+<ellipse fill="#edad56" stroke="#edad56" stroke-width="3" cx="283.54" cy="-227" rx="55.64" ry="18" style=""/>
+<text text-anchor="middle" x="283.54" y="-222.8" font-family="Times,serif" font-size="14.00" style="">totalSupply</text>
+</g>
+<!-- EVABurnVault.backingWithdraw&#45;&gt;EverValueCoin.totalSupply -->
+<g id="edge3" class="edge" data-name="EVABurnVault.backingWithdraw-&gt;EverValueCoin.totalSupply">
+
+<path fill="none" stroke="white" stroke-width="2" d="M134.72,-294.8C164.36,-281.21 205.83,-262.19 237.31,-247.75" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="238.45,-251.07 246.08,-243.72 235.53,-244.71 238.45,-251.07" style=""/>
 </g>
 <!-- EverValueCoin.burnFrom -->
-<g id="node3" class="node" pointer-events="visible" data-name="EverValueCoin.burnFrom">
+<g id="node6" class="node" pointer-events="visible" data-name="EverValueCoin.burnFrom">
 
-<ellipse fill="#ff9797" stroke="#ff9797" stroke-width="3" cx="83.53" cy="-88" rx="49.83" ry="18" style=""/>
-<text text-anchor="middle" x="83.53" y="-83.8" font-family="Times,serif" font-size="14.00" style="">burnFrom</text>
+<ellipse fill="#edad56" stroke="#edad56" stroke-width="3" cx="283.54" cy="-173" rx="49.83" ry="18" style=""/>
+<text text-anchor="middle" x="283.54" y="-168.8" font-family="Times,serif" font-size="14.00" style="">burnFrom</text>
 </g>
-<!-- EverValueCoin.burnFrom&#45;&gt;EverValueCoin._burn -->
-<g id="edge6" class="edge" data-name="EverValueCoin.burnFrom-&gt;EverValueCoin._burn">
+<!-- EVABurnVault.backingWithdraw&#45;&gt;EverValueCoin.burnFrom -->
+<g id="edge6" class="edge" data-name="EVABurnVault.backingWithdraw-&gt;EverValueCoin.burnFrom">
 
-<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M134.67,-88C161.16,-88 193.46,-88 219.43,-88" style=""/>
-<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="219.35,-91.5 229.35,-88 219.35,-84.5 219.35,-91.5" style=""/>
+<path fill="none" stroke="white" stroke-width="2" d="M112.53,-292.94C133.02,-268.51 171.56,-226.17 212.44,-200 218.34,-196.22 224.86,-192.84 231.47,-189.85" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="232.67,-193.14 240.56,-186.07 229.98,-186.68 232.67,-193.14" style=""/>
 </g>
-<!-- EverValueCoin.burnFrom&#45;&gt;EverValueCoin._msgSender -->
-<g id="edge5" class="edge" data-name="EverValueCoin.burnFrom-&gt;EverValueCoin._msgSender">
+<!-- IERC20.balanceOf -->
+<g id="node7" class="node" pointer-events="visible" data-name="IERC20.balanceOf">
 
-<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M123.96,-99.72C149.22,-107.22 182.39,-117.08 210.35,-125.38" style=""/>
-<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="209.3,-128.72 219.88,-128.21 211.29,-122.01 209.3,-128.72" style=""/>
+<ellipse fill="#edad56" stroke="#edad56" stroke-width="3" cx="283.54" cy="-88" rx="50.92" ry="18" style=""/>
+<text text-anchor="middle" x="283.54" y="-83.8" font-family="Times,serif" font-size="14.00" style="">balanceOf</text>
 </g>
-<!-- EverValueCoin._spendAllowance -->
-<g id="node7" class="node" pointer-events="visible" data-name="EverValueCoin._spendAllowance">
+<!-- EVABurnVault.backingWithdraw&#45;&gt;IERC20.balanceOf -->
+<g id="edge4" class="edge" data-name="EVABurnVault.backingWithdraw-&gt;IERC20.balanceOf">
 
-<ellipse fill="#edad56" stroke="#edad56" stroke-width="3" cx="267.28" cy="-34" rx="80.45" ry="18" style=""/>
-<text text-anchor="middle" x="267.28" y="-29.8" font-family="Times,serif" font-size="14.00" style="">_spendAllowance</text>
+<path fill="none" stroke="white" stroke-width="2" d="M105.01,-292.71C121.97,-258 164.53,-185.22 212.44,-134 220.35,-125.54 229.62,-117.33 238.79,-110.17" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="240.65,-113.15 246.59,-104.38 236.47,-107.53 240.65,-113.15" style=""/>
 </g>
-<!-- EverValueCoin.burnFrom&#45;&gt;EverValueCoin._spendAllowance -->
-<g id="edge4" class="edge" data-name="EverValueCoin.burnFrom-&gt;EverValueCoin._spendAllowance">
+<!-- EVABurnVault.backingWithdraw&#45;&gt;IERC20.balanceOf -->
+<g id="edge5" class="edge" data-name="EVABurnVault.backingWithdraw-&gt;IERC20.balanceOf">
 
-<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M123.96,-76.28C147.13,-69.4 176.94,-60.54 203.29,-52.72" style=""/>
-<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="204.01,-56.15 212.6,-49.95 202.02,-49.44 204.01,-56.15" style=""/>
+<path fill="none" stroke="white" stroke-width="2" d="M110.93,-293.06C130.64,-261.48 169.38,-198.03 212.44,-152 225.32,-138.23 241.84,-125.1 255.6,-114.15" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="257.5,-117.11 263.12,-108.12 253.13,-111.64 257.5,-117.11" style=""/>
+</g>
+<!-- IERC20.safeTransfer -->
+<g id="node8" class="node" pointer-events="visible" data-name="IERC20.safeTransfer">
+
+<ellipse fill="#edad56" stroke="#edad56" stroke-width="3" cx="283.54" cy="-34" rx="59.08" ry="18" style=""/>
+<text text-anchor="middle" x="283.54" y="-29.8" font-family="Times,serif" font-size="14.00" style="">safeTransfer</text>
+</g>
+<!-- EVABurnVault.backingWithdraw&#45;&gt;IERC20.safeTransfer -->
+<g id="edge7" class="edge" data-name="EVABurnVault.backingWithdraw-&gt;IERC20.safeTransfer">
+
+<path fill="none" stroke="white" stroke-width="2" d="M100.87,-292.75C110.61,-246.42 141.49,-127.63 212.44,-61 216.13,-57.53 220.31,-54.5 224.76,-51.84" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="226.19,-55.04 233.51,-47.37 223.01,-48.8 226.19,-55.04" style=""/>
 </g>
 <!-- key -->
-<g id="node8" class="node" pointer-events="visible" data-name="key">
+<g id="node9" class="node" pointer-events="visible" data-name="key">
 
-<polygon fill="#edad56" stroke="none" stroke-width="3" points="148.53,-351 18.53,-351 18.53,-263 148.53,-263 148.53,-351" style=""/>
-<text text-anchor="start" x="68.16" y="-332.4" font-family="Times,serif" font-size="14.00" style="">Internal Call</text>
-<text text-anchor="start" x="64.27" y="-312.4" font-family="Times,serif" font-size="14.00" style="">External Call</text>
-<text text-anchor="start" x="41.73" y="-292.4" font-family="Times,serif" font-size="14.00" style="">Defined Contract</text>
-<text text-anchor="start" x="28.13" y="-272.4" font-family="Times,serif" font-size="14.00" style="">Undefined Contract</text>
+<polygon fill="#edad56" stroke="none" stroke-width="3" points="161.22,-521 31.22,-521 31.22,-433 161.22,-433 161.22,-521" style=""/>
+<text text-anchor="start" x="80.86" y="-502.4" font-family="Times,serif" font-size="14.00" style="">Internal Call</text>
+<text text-anchor="start" x="76.97" y="-482.4" font-family="Times,serif" font-size="14.00" style="">External Call</text>
+<text text-anchor="start" x="54.42" y="-462.4" font-family="Times,serif" font-size="14.00" style="">Defined Contract</text>
+<text text-anchor="start" x="40.82" y="-442.4" font-family="Times,serif" font-size="14.00" style="">Undefined Contract</text>
 </g>
 <!-- key2 -->
-<g id="node9" class="node" pointer-events="visible" data-name="key2">
+<g id="node10" class="node" pointer-events="visible" data-name="key2">
 
-<polygon fill="#edad56" stroke="none" stroke-width="3" points="294.28,-351 240.28,-351 240.28,-263 294.28,-263 294.28,-351" style=""/>
-<text text-anchor="start" x="257.28" y="-332.4" font-family="Times,serif" font-size="14.00" style="">   </text>
-<text text-anchor="start" x="257.28" y="-312.4" font-family="Times,serif" font-size="14.00" style="">   </text>
-<polygon fill="#445773" stroke="none" points="255.28,-287 255.28,-307 280.28,-307 280.28,-287 255.28,-287" style=""/>
-<text text-anchor="start" x="257.28" y="-292.4" font-family="Times,serif" font-size="14.00" style="">   </text>
-<polygon fill="none" stroke="#e8726d" points="257.28,-269 257.28,-285 278.28,-285 278.28,-269 257.28,-269" style=""/>
-</g>
-<!-- key&#45;&gt;key2 -->
-<g id="edge7" class="edge" data-name="key-&gt;key2">
-
-<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M141.53,-337C187.04,-337 201.55,-337 241.37,-337" style=""/>
-<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="241.25,-340.5 251.25,-337 241.25,-333.5 241.25,-340.5" style=""/>
+<polygon fill="#edad56" stroke="none" stroke-width="3" points="310.54,-521 256.54,-521 256.54,-433 310.54,-433 310.54,-521" style=""/>
+<text text-anchor="start" x="273.54" y="-502.4" font-family="Times,serif" font-size="14.00" style="">   </text>
+<text text-anchor="start" x="273.54" y="-482.4" font-family="Times,serif" font-size="14.00" style="">   </text>
+<polygon fill="#445773" stroke="none" points="271.54,-457 271.54,-477 296.54,-477 296.54,-457 271.54,-457" style=""/>
+<text text-anchor="start" x="273.54" y="-462.4" font-family="Times,serif" font-size="14.00" style="">   </text>
+<polygon fill="none" stroke="#e8726d" points="273.54,-439 273.54,-455 294.54,-455 294.54,-439 273.54,-439" style=""/>
 </g>
 <!-- key&#45;&gt;key2 -->
 <g id="edge8" class="edge" data-name="key-&gt;key2">
 
-<path fill="none" stroke="white" stroke-width="2" d="M141.53,-317C187.04,-317 201.55,-317 241.37,-317" style=""/>
-<polygon fill="white" stroke="white" stroke-width="2" points="241.25,-320.5 251.25,-317 241.25,-313.5 241.25,-320.5" style=""/>
+<path fill="none" stroke="#1bc6a6" stroke-width="2" d="M154.22,-507C201.38,-507 216.27,-507 257.76,-507" style=""/>
+<polygon fill="#1bc6a6" stroke="#1bc6a6" stroke-width="2" points="257.52,-510.5 267.52,-507 257.52,-503.5 257.52,-510.5" style=""/>
+</g>
+<!-- key&#45;&gt;key2 -->
+<g id="edge9" class="edge" data-name="key-&gt;key2">
+
+<path fill="none" stroke="white" stroke-width="2" d="M154.22,-487C201.38,-487 216.27,-487 257.76,-487" style=""/>
+<polygon fill="white" stroke="white" stroke-width="2" points="257.52,-490.5 267.52,-487 257.52,-483.5 257.52,-490.5" style=""/>
 </g>
 </g>
 </svg>
