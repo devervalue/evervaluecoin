@@ -112,9 +112,9 @@ Operates as a centralized exchange for EVA, where users can buy or sell EVA toke
 
 The following charts provides a general view of the contracts structure and interactions
 
-![BetterToken](image.png)
-![BurnVault](image-1.png)
-![Market](image-2.png)
+![BetterToken](image.svg)
+![BurnVault](image-1.svg)
+![Market](image-2.svg)
 
 ## Installation
 

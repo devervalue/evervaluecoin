@@ -1,0 +1,176 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
+import "./EverValueCoin.sol";
+import "hardhat/console.sol";
+
+/// @title EVAMarketWbtc
+/// @notice A centralized market for buying and selling EVA tokens at administratively defined rates. A variaton of the EVAMarket contract to handle more decimals on the rate.
+/// @dev This contract allows users to buy or sell EVA tokens using a defined market token, with adjustable rates and fees.
+contract EVAMarketWbtc is Ownable2Step {
+    using SafeERC20 for IERC20;
+    using SafeERC20 for EverValueCoin;
+
+    /// @notice The EverValueCoin (EVA) contract address
+    EverValueCoin private immutable eva;
+    /// @notice The market token used for buying and selling eva
+    IERC20 private immutable marketToken;
+
+    /// @notice the marketToken decimals to normalize the amount
+    uint256 public immutable marketTokenDecimals;
+
+    /// @notice The precision to use in the calculation of the price between EVA tokens and market tokens
+    uint256 public constant PRECISION = 10 ** 8; // Eight decimals representation allowen in price
+
+    /// @notice The current price of PRECISION EVA tokens in the market token
+    uint256 public marketTokenPerPrecisionEva;
+
+    /// @notice The fee for transactions, represented in perthousand (1/1000)
+    uint256 public fee;
+
+    /// @notice Emitted when a user buys EVA tokens with market tokens
+    /// @param marketTokenFromUser The amount of market tokens spent by the user
+    /// @param evaToUser The amount of EVA tokens received by the user
+    event userBought(uint256 marketTokenFromUser, uint256 evaToUser);
+
+    /// @notice Emitted when a user sells EVA tokens for market tokens
+    /// @param marketTokenToUser The amount of market tokens received by the user
+    /// @param evaFromUser The amount of EVA tokens sold by the user
+    event userSold(uint256 marketTokenToUser, uint256 evaFromUser);
+
+    /// @notice Constructor that sets up the market with the EVA, market token, initial rate, and fee
+    /// @param _addrEva The address of the EVA contract
+    /// @param _addrMarketToken The address of the market token
+    /// @param _marketTokenPerPrecitionEva The price of PRECISION EVA in market tokens
+    /// @param _fee The transaction fee in perthousand (1/1000)
+    constructor(
+        address _addrEva,
+        address _addrMarketToken,
+        uint256 _marketTokenPerPrecitionEva,
+        uint256 _fee,
+        uint256 _marketTokenDecimals
+    ) Ownable(msg.sender) {
+        require(_addrEva != address(0), "Cannot set EVA to zero address");
+        require(
+            _addrMarketToken != address(0),
+            "Cannot set market token to zero address"
+        );
+        require(_marketTokenPerPrecitionEva > 0, "Rate must be greater than 0");
+        require(_fee < 1000, "Fee must be lesser than 1000");
+
+        eva = EverValueCoin(_addrEva);
+        marketToken = IERC20(_addrMarketToken);
+
+        marketTokenPerPrecisionEva = _marketTokenPerPrecitionEva;
+        fee = _fee;
+        marketTokenDecimals = _marketTokenDecimals;
+    }
+
+    /// @notice Allows a user to buy EVA tokens with market tokens
+    /// @param amount The amount of market tokens to spend
+    function buy(uint256 amount) public {
+        require(
+            amount <= marketToken.balanceOf(msg.sender),
+            "User doesn't have enough balance"
+        );
+
+        // Normalize the amount based on the decimals of the tokens
+        uint256 evaDecimals = eva.decimals();
+        uint256 normalizedAmount = normalizeAmount(
+            amount,
+            marketTokenDecimals,
+            evaDecimals
+        );
+
+        uint256 evaToUser = (normalizedAmount * PRECISION) /
+            marketTokenPerPrecisionEva;
+
+        require(evaToUser > 0, "Amount too small");
+        require(
+            evaToUser <= eva.balanceOf(address(this)),
+            "Market doesn't have enough EVA"
+        );
+
+        marketToken.safeTransferFrom(msg.sender, this.owner(), amount);
+        eva.safeTransfer(msg.sender, evaToUser);
+
+        emit userBought(amount, evaToUser);
+    }
+
+    /// @notice Allows a user to sell EVA tokens for market tokens
+    /// @param amount The amount of EVA tokens to sell
+    function sell(uint256 amount) public {
+        require(
+            amount <= eva.balanceOf(msg.sender),
+            "User doesn't have enough EVA"
+        );
+
+        // Normalize the amount based on the decimals of the tokens
+        uint256 evaDecimals = eva.decimals();
+
+        uint256 normalizedAmount = normalizeAmount(
+            amount,
+            evaDecimals,
+            marketTokenDecimals
+        );
+
+        uint256 marketTokenToTransfer = (((normalizedAmount *
+            marketTokenPerPrecisionEva) / PRECISION) * (1000 - fee)) / 1000;
+
+        require(
+            marketTokenToTransfer <= marketToken.balanceOf(address(this)),
+            "Market doesn't have enough balance"
+        );
+        require(marketTokenToTransfer > 0, "Amount too small");
+
+        eva.safeTransferFrom(msg.sender, this.owner(), amount);
+        marketToken.safeTransfer(msg.sender, marketTokenToTransfer);
+
+        emit userSold(marketTokenToTransfer, amount);
+    }
+
+    /// @notice Allows the contract owner to set the price of PRECISION EVA tokens in market tokens
+    /// @param _marketTokenPerPrecisionEva The new price for PRECISION EVA in market tokens
+    function setRate(uint256 _marketTokenPerPrecisionEva) public onlyOwner {
+        require(_marketTokenPerPrecisionEva > 0, "Rate must be greater than 0");
+        marketTokenPerPrecisionEva = _marketTokenPerPrecisionEva;
+    }
+
+    /// @notice Allows the contract owner to set the transaction fee for selling EVA tokens
+    /// @param _fee The new fee to use, in perthousand (1/1000)
+    function setFee(uint256 _fee) public onlyOwner {
+        require(_fee < 1000, "Fee must be lesser than 1000");
+        fee = _fee;
+    }
+
+    /// @notice Allows the contract owner to withdraw all tokens from the contract
+    function withdrawAll() public onlyOwner {
+        uint256 balanceEva = eva.balanceOf(address(this));
+        uint256 balanceMarketToken = marketToken.balanceOf(address(this));
+
+        eva.safeTransfer(this.owner(), balanceEva);
+        marketToken.safeTransfer(this.owner(), balanceMarketToken);
+    }
+
+    /// @notice Normalizes the amount based on the token decimals
+    /// @param amount The original amount
+    /// @param fromDecimals The decimals of the token being converted from
+    /// @param toDecimals The decimals of the token being converted to
+    /// @return The normalized amount
+    function normalizeAmount(
+        uint256 amount,
+        uint256 fromDecimals,
+        uint256 toDecimals
+    ) private pure returns (uint256) {
+        if (fromDecimals == toDecimals) {
+            return amount;
+        } else if (fromDecimals > toDecimals) {
+            return amount / (10 ** (fromDecimals - toDecimals));
+        } else {
+            return amount * (10 ** (toDecimals - fromDecimals));
+        }
+    }
+}
