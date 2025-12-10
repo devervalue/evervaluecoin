@@ -6,128 +6,187 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./EverValueCoin.sol";
 
-/// @notice Interface for SLSburnVaultFactory to get vault count and report depletion
+/**
+ * @title Interface for SLSburnVaultFactory
+ * @notice Minimal functions used by SLSburnVault to report depletion and read vault count.
+ */
 interface ISLSburnVaultFactory {
     function totalVaultCount() external view returns (uint256);
     function onVaultDepletion() external;
 }
 
-/// @title SLSburnVault
-/// @notice A secondary liquidity source vault that allows users to burn EVA tokens in exchange for backing tokens for a fixed EVA amount.
-/// @dev This contract facilitates the burning of EVA tokens and ensures fair distribution of backing tokens based on a fixed EVA pool.
+/**
+ * @title SLSburnVault
+ * @notice Single-backup vault where users burn EVA to redeem proportional backing.
+ * @dev No per-vault EVA reserve and no global totalSupply dependency.
+ *      Depletion is auto-marked when the allocation reaches zero (single active vault model).
+ *      Emergency withdrawals let the admin recover stray tokens:
+ *        - EVA at any time
+ *        - Backing only after depletion.
+ */
 contract SLSburnVault is Ownable {
     using SafeERC20 for IERC20;
     using SafeERC20 for EverValueCoin;
 
-    uint256 public constant ONE_EVA = 1 * 10**18;
-    /// @notice The backing token contract address
-    IERC20 immutable backingToken;
-    /// @notice The EverValueCoin (EVA) contract address
-    EverValueCoin immutable eva;
-    /// @notice The factory contract address
-    ISLSburnVaultFactory immutable factory;
-    /// @notice The publicly accessible address of the backing token contract
-    address public backingTokenAddress;
+    uint256 public constant ONE_EVA = 1e18;
 
-    /// @notice The current amount of EVA tokens this vault covers (decreases as tokens are burned)
+    IERC20 public immutable backingToken;
+    EverValueCoin public immutable eva;
+    ISLSburnVaultFactory public immutable factory;
+
+    /// @notice Remaining EVA allocation this vault covers (decreases as users burn).
     uint256 public fixedEvaAmount;
+    /// @notice Flag set once the vault is fully depleted and reported to factory.
+    bool public hasBeenDepleted;
+    /// @notice Addresses allowed to call increaseBacking.
+    mapping(address => bool) public isPayer;
 
-    /// @notice Whether the vault has been depleted
-    bool public hasBeenDepleted = false;
+    event BurnMade(uint256 evaBurned, uint256 backingWithdrew);
+    event Depleted(address vault);
+    event EmergencyWithdrawBacking(address to, uint256 backingAmount);
+    event EmergencyWithdrawEVA(address to, uint256 evaAmount);
+    event BackingIncreased(uint256 additionalEva, uint256 backingAdded);
+    event PayerUpdated(address indexed payer, bool allowed);
 
-    /// @notice Emitted when a user burns EVA tokens and withdraws backing tokens
-    /// @param evaBurned The amount of EVA tokens burned
-    /// @param backingWithdrew The amount of backing tokens withdrawn
-    event burnMade(uint256 evaBurned, uint256 backingWithdrew);
-
-    /// @notice Emitted when backing is increased for more EVA coverage
-    /// @param backingAdded The amount of backing tokens added
-    /// @param evaAmountCovered The additional EVA amount covered by the backing
-    event backingIncreased(uint256 backingAdded, uint256 evaAmountCovered);
-
-
-    /// @notice Constructor that sets up the vault with the EVA and backing token addresses and initial EVA amount and reserves 1 EVA for the last withdrawal
-    /// @param _addrEva The address of the EVA token contract
-    /// @param _addrBackingToken The address of the backing token contract
-    /// @param _fixedEvaAmount The fixed amount of EVA tokens this vault will cover
-    /// @param _factory The address of the factory contract
-    constructor(address _addrEva, address _addrBackingToken, uint256 _fixedEvaAmount, address _factory) Ownable(msg.sender) {
+    /**
+     * @param _addrEva Address of EVA token.
+     * @param _addrBackingToken Address of backing token.
+     * @param _fixedEvaAmount Total EVA this vault will cover (full amount, no reserve subtraction).
+     * @param _factory Address of the factory.
+     */
+    constructor(
+        address _addrEva,
+        address _addrBackingToken,
+        uint256 _fixedEvaAmount,
+        address _factory
+    ) Ownable(msg.sender) {
         require(_addrEva != address(0), "Cannot set EVA to zero address");
         require(_addrBackingToken != address(0), "Cannot set backing token to zero address");
         require(_factory != address(0), "Cannot set factory to zero address");
-        require(_fixedEvaAmount >= ONE_EVA, "Fixed EVA amount must be greater than or equal to 1 EVA");
+        require(_fixedEvaAmount >= ONE_EVA, "Fixed EVA amount must be >= 1 EVA");
 
         eva = EverValueCoin(_addrEva);
-        require(_fixedEvaAmount <= eva.totalSupply(), "Fixed EVA amount cannot exceed total supply");
+        require(_fixedEvaAmount <= eva.totalSupply(), "Fixed EVA exceeds total supply");
 
         backingToken = IERC20(_addrBackingToken);
-        backingTokenAddress = _addrBackingToken;
         factory = ISLSburnVaultFactory(_factory);
-        
-        //Always reserve 1 EVA for the last withdrawal
-        fixedEvaAmount = _fixedEvaAmount - ONE_EVA;
+
+        fixedEvaAmount = _fixedEvaAmount;
+        isPayer[msg.sender] = true;
+        emit PayerUpdated(msg.sender, true);
     }
 
-    /// @notice Withdraws a proportional amount of backing tokens by burning EVA tokens
-    /// @dev The amount of backing tokens to withdraw is based on the EVA burned and the current backing token balance relative to the fixed EVA amount
-    /// @param amount The amount of EVA tokens to burn
-    function backingWithdraw(uint256 amount) public {
+    /**
+     * @notice Burn EVA to withdraw proportional backing.
+     * @param amount EVA amount to burn.
+     */
+    function backingWithdraw(uint256 amount) external  {
         uint256 effectiveEvaAmount = getEffectiveEvaAmount();
-        require(effectiveEvaAmount > 0, "No EVA amount remaining in this vault");
-        require(amount <= effectiveEvaAmount, "Amount exceeds remaining EVA in vault");
-        require(backingToken.balanceOf(address(this)) > 0, "Nothing to withdraw");
+        require(effectiveEvaAmount > 0, "No EVA remaining");
+        require(amount <= effectiveEvaAmount, "Amount exceeds remaining EVA");
 
-        // Add 1 EVA to the effective EVA amount to account for the last withdrawal
-        uint256 backingToTransfer = (amount * backingToken.balanceOf(address(this))) / (effectiveEvaAmount + ONE_EVA);
+        uint256 backingBal = backingToken.balanceOf(address(this));
+        require(backingBal > 0, "Nothing to withdraw");
+
+        uint256 backingToTransfer = (amount * backingBal) / effectiveEvaAmount;
         require(backingToTransfer > 0, "Nothing to withdraw");
 
-        // Reduce the fixed EVA amount
         fixedEvaAmount -= amount;
-
-        // Burn EVA tokens from user
         eva.burnFrom(msg.sender, amount);
-        
-        // Transfer proportional backing tokens to user
         backingToken.safeTransfer(msg.sender, backingToTransfer);
 
-        emit burnMade(amount, backingToTransfer);
-    }
+        emit BurnMade(amount, backingToTransfer);
 
-    /// @notice Gets the effective EVA amount this vault can actually cover
-    /// @dev Returns minimum of fixedEvaAmount and (totalSupply - totalVaultCount) to ensure enough EVA remains for all vaults
-    /// @return The effective EVA amount considering current total supply and vault count
-    function getEffectiveEvaAmount() public view returns (uint256) {
-        uint256 currentTotalSupply = eva.totalSupply();
-        uint256 vaultCount = factory.totalVaultCount();        
-        // Available EVA pool = totalSupply - vaultCount (reserving 1 EVA per vault)
-        // Convert vaultCount to wei for proper comparison (vaultCount * 1e18)
-        uint256 reservedEva = vaultCount * ONE_EVA;
-        uint256 availableEvaPool = currentTotalSupply > reservedEva ? currentTotalSupply - reservedEva : 0;
-        
-        return fixedEvaAmount < availableEvaPool ? fixedEvaAmount : availableEvaPool;
-    }
-
-    /// @notice Admin function to withdraw remaining backing when system is in final state
-    /// @dev Can only be called when effectiveEvaAmount is 0
-    /// @dev if vault has been depletead but for some reason it recives backingToken and EVA, admin can call this function to re-depleate it without recalling the onVaultDepletion logic on SLSburnVaultFactory.
-    /// @dev if vault has been depleated but for some reasion it recives only backingToken or only EVA, admin can transfer EVA or backingToken to allow execution and empty the vault without recalling the onVaultDepletion logic on SLSburnVaultFactory.
-    function adminFinalWithdraw() external onlyOwner {
-        uint256 effectiveEvaAmount = getEffectiveEvaAmount();
-        // Convert vaultCount to wei for proper comparison (vaultCount * 1e18)
-        require(effectiveEvaAmount == 0, "Can only withdraw when effective EVA amount is 0");
-        
-        uint256 backingBalance = backingToken.balanceOf(address(this));
-        uint256 evaBalance = eva.balanceOf(address(this));
-        // Burn the locked EVA (always 1 EVA, guaranteed by factory at vault creation)
-        eva.burn(evaBalance);
-        if(!hasBeenDepleted) {
-            factory.onVaultDepletion();
+        if (fixedEvaAmount == 0 && !hasBeenDepleted) {
             hasBeenDepleted = true;
+            factory.onVaultDepletion();
+            emit Depleted(address(this));
         }
-        
-        // Transfer all remaining backing to owner
-        backingToken.safeTransfer(owner(), backingBalance);        
-        emit burnMade(evaBalance, backingBalance);
     }
 
+    /**
+     * @notice Effective EVA this vault can currently cover.
+     * @return Remaining EVA allocation.
+     */
+    function getEffectiveEvaAmount() public view returns (uint256) {
+        return fixedEvaAmount;
+    }
+
+    /**
+     * @notice Quote the current backing output for a given EVA burn amount.
+     * @param amount EVA amount to quote (use 1e18 to get per-EVA rate).
+     * @return backingOut Backing tokens the user would receive at current state; returns 0 if not withdrawable.
+     */
+    function getBurningQuote(uint256 amount) external view returns (uint256 backingOut) {
+        uint256 effectiveEvaAmount = getEffectiveEvaAmount();
+        if (effectiveEvaAmount == 0) {
+            return 0;
+        }
+        uint256 backingBal = backingToken.balanceOf(address(this));
+        if (backingBal == 0) {
+            return 0;
+        }
+        if (amount > effectiveEvaAmount) {
+            amount = effectiveEvaAmount;
+        }
+        backingOut = (amount * backingBal) / effectiveEvaAmount;
+    }
+
+    /**
+     * @notice Tops up backing and optionally increases EVA allocation. Callable by authorized payers.
+     * @param additionalEva Additional EVA allocation to cover (can be 0).
+     * @param backingAmount Backing to deposit. Must be > 0.
+     * @dev Price guard applies only when additionalEva > 0:
+     *      (currentBacking + backingAmount)/(fixedEvaAmount + additionalEva) >= currentBacking/fixedEvaAmount
+     *      implemented as backingAmount * fixedEvaAmount >= currentBacking * additionalEva.
+     *      When additionalEva == 0, the call simply raises the price by adding backing.
+     */
+    function increaseBacking(uint256 additionalEva, uint256 backingAmount) external {
+        require(isPayer[msg.sender], "Not authorized payer");
+        require(!hasBeenDepleted, "Vault is depleted");
+        require(backingAmount > 0, "backingAmount is zero");
+
+        uint256 currentBacking = backingToken.balanceOf(address(this));
+
+        if (additionalEva > 0) {
+            require(backingAmount * fixedEvaAmount >= currentBacking * additionalEva, "Price would decrease");
+            fixedEvaAmount += additionalEva;
+            require(fixedEvaAmount <= eva.totalSupply(), "Fixed EVA amount exceeds total supply");
+        }
+
+        backingToken.safeTransferFrom(owner(), address(this), backingAmount);
+
+        emit BackingIncreased(additionalEva, backingAmount);
+    }
+
+    /**
+     * @notice Owner sets or unsets a payer authorized to call increaseBacking.
+     * @param payer Address to update.
+     * @param allowed True to allow, false to revoke.
+     */
+    function setPayer(address payer, bool allowed) external onlyOwner {
+        require(payer != address(0), "Invalid payer");
+        isPayer[payer] = allowed;
+        emit PayerUpdated(payer, allowed);
+    }
+
+    /**
+     * @notice Emergency: recover backing tokens after depletion (e.g., if backing arrives post-depletion).
+     * @dev Requires vault to be marked depleted and allocation to be zero.
+     */
+    function emergencyWithdrawBacking() external onlyOwner {
+        require(hasBeenDepleted && fixedEvaAmount == 0, "Not depleted");
+        uint256 backingBal = backingToken.balanceOf(address(this));
+        backingToken.safeTransfer(owner(), backingBal);
+        emit EmergencyWithdrawBacking(owner(), backingBal);
+    }
+
+    /**
+     * @notice Emergency: recover any EVA sent by mistake at any time.
+     */
+    function emergencyWithdrawEVA() external onlyOwner {
+        uint256 evaBal = eva.balanceOf(address(this));
+        eva.safeTransfer(owner(), evaBal);
+        emit EmergencyWithdrawEVA(owner(), evaBal);
+    }
 }
