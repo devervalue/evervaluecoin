@@ -51,7 +51,7 @@ describe("SLSburnVault - sequential flow", function () {
     const extraBacking = ethers.parseUnits("5", 8);
     await wbtc.approve(v1Addr, extraBacking);
     await v1.increaseBacking(0, extraBacking);
-    expect(await v1.fixedEvaAmount()).to.equal(FIXED_EVA);
+    expect(await v1.remainingEvaCovered()).to.equal(FIXED_EVA);
     expect(await wbtc.balanceOf(v1Addr)).to.equal(INITIAL_BACKING + extraBacking);
 
     // Deplete the vault

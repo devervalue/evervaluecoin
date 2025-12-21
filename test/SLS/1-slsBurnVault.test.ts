@@ -176,7 +176,7 @@ describe("SLSburnVault - updated logic", function () {
       const extraBacking = ethers.parseUnits("10", 8);
       await wbtc.approve(await vault.getAddress(), extraBacking);
       await vault.increaseBacking(0, extraBacking);
-      expect(await vault.fixedEvaAmount()).to.equal(FIXED_EVA);
+      expect(await vault.remainingEvaCovered()).to.equal(FIXED_EVA);
       expect(await wbtc.balanceOf(await vault.getAddress())).to.equal(BACKING_AMOUNT + extraBacking);
     });
 
@@ -186,7 +186,7 @@ describe("SLSburnVault - updated logic", function () {
       const extraEva = ONE_EVA * 10n;
       await wbtc.approve(await vault.getAddress(), extraBacking);
       await vault.increaseBacking(extraEva, extraBacking);
-      expect(await vault.fixedEvaAmount()).to.equal(FIXED_EVA + extraEva);
+      expect(await vault.remainingEvaCovered()).to.equal(FIXED_EVA + extraEva);
     });
 
     it("reverts if price would decrease", async () => {
@@ -204,7 +204,7 @@ describe("SLSburnVault - updated logic", function () {
         (currentBacking * tooMuch) / FIXED_EVA + 1n;
       await wbtc.approve(await vault.getAddress(), backingNeeded);
       await expect(vault.increaseBacking(tooMuch, backingNeeded)).to.be.revertedWith(
-        "Fixed EVA amount exceeds total supply"
+        "Remaining EVA amount exceeds total supply"
       );
     });
 

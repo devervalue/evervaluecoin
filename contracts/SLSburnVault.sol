@@ -35,7 +35,7 @@ contract SLSburnVault is Ownable {
     ISLSburnVaultFactory public immutable factory;
 
     /// @notice Remaining EVA allocation this vault covers (decreases as users burn).
-    uint256 public fixedEvaAmount;
+    uint256 public remainingEvaCovered;
     /// @notice Flag set once the vault is fully depleted and reported to factory.
     bool public hasBeenDepleted;
     /// @notice Addresses allowed to call increaseBacking.
@@ -51,27 +51,27 @@ contract SLSburnVault is Ownable {
     /**
      * @param _addrEva Address of EVA token.
      * @param _addrBackingToken Address of backing token.
-     * @param _fixedEvaAmount Total EVA this vault will cover (full amount, no reserve subtraction).
+     * @param _remainingEvaCovered  Total EVA this vault will cover (full amount, no reserve subtraction).
      * @param _factory Address of the factory.
      */
     constructor(
         address _addrEva,
         address _addrBackingToken,
-        uint256 _fixedEvaAmount,
+        uint256 _remainingEvaCovered ,
         address _factory
     ) Ownable(msg.sender) {
         require(_addrEva != address(0), "Cannot set EVA to zero address");
         require(_addrBackingToken != address(0), "Cannot set backing token to zero address");
         require(_factory != address(0), "Cannot set factory to zero address");
-        require(_fixedEvaAmount >= ONE_EVA, "Fixed EVA amount must be >= 1 EVA");
+        require(_remainingEvaCovered >= ONE_EVA, "Remaining EVA covered amount must be >= 1 EVA");
 
         eva = EverValueCoin(_addrEva);
-        require(_fixedEvaAmount <= eva.totalSupply(), "Fixed EVA exceeds total supply");
+        require(_remainingEvaCovered <= eva.totalSupply(), "Remaining EVA covered amount exceeds total supply");
 
         backingToken = IERC20(_addrBackingToken);
         factory = ISLSburnVaultFactory(_factory);
 
-        fixedEvaAmount = _fixedEvaAmount;
+        remainingEvaCovered  = _remainingEvaCovered;
         isPayer[msg.sender] = true;
         emit PayerUpdated(msg.sender, true);
     }
@@ -91,13 +91,13 @@ contract SLSburnVault is Ownable {
         uint256 backingToTransfer = (amount * backingBal) / effectiveEvaAmount;
         require(backingToTransfer > 0, "Nothing to withdraw");
 
-        fixedEvaAmount -= amount;
+        remainingEvaCovered -= amount;
         eva.burnFrom(msg.sender, amount);
         backingToken.safeTransfer(msg.sender, backingToTransfer);
 
         emit BurnMade(amount, backingToTransfer);
 
-        if (fixedEvaAmount == 0 && !hasBeenDepleted) {
+        if (remainingEvaCovered == 0 && !hasBeenDepleted) {
             hasBeenDepleted = true;
             factory.onVaultDepletion();
             emit Depleted(address(this));
@@ -109,7 +109,7 @@ contract SLSburnVault is Ownable {
      * @return Remaining EVA allocation.
      */
     function getEffectiveEvaAmount() public view returns (uint256) {
-        return fixedEvaAmount;
+        return remainingEvaCovered;
     }
 
     /**
@@ -137,8 +137,8 @@ contract SLSburnVault is Ownable {
      * @param additionalEva Additional EVA allocation to cover (can be 0).
      * @param backingAmount Backing to deposit. Must be > 0.
      * @dev Price guard applies only when additionalEva > 0:
-     *      (currentBacking + backingAmount)/(fixedEvaAmount + additionalEva) >= currentBacking/fixedEvaAmount
-     *      implemented as backingAmount * fixedEvaAmount >= currentBacking * additionalEva.
+     *      (currentBacking + backingAmount)/(remainingEvaCovered + additionalEva) >= currentBacking/remainingEvaCovered
+     *      implemented as backingAmount * remainingEvaCovered >= currentBacking * additionalEva.
      *      When additionalEva == 0, the call simply raises the price by adding backing.
      */
     function increaseBacking(uint256 additionalEva, uint256 backingAmount) external {
@@ -149,12 +149,12 @@ contract SLSburnVault is Ownable {
         uint256 currentBacking = backingToken.balanceOf(address(this));
 
         if (additionalEva > 0) {
-            require(backingAmount * fixedEvaAmount >= currentBacking * additionalEva, "Price would decrease");
-            fixedEvaAmount += additionalEva;
-            require(fixedEvaAmount <= eva.totalSupply(), "Fixed EVA amount exceeds total supply");
+            require(backingAmount * remainingEvaCovered >= currentBacking * additionalEva, "Price would decrease");
+            remainingEvaCovered += additionalEva;
+            require(remainingEvaCovered <= eva.totalSupply(), "Remaining EVA amount exceeds total supply");
         }
 
-        backingToken.safeTransferFrom(owner(), address(this), backingAmount);
+        backingToken.safeTransferFrom(msg.sender, address(this), backingAmount);
 
         emit BackingIncreased(additionalEva, backingAmount);
     }
@@ -175,7 +175,7 @@ contract SLSburnVault is Ownable {
      * @dev Requires vault to be marked depleted and allocation to be zero.
      */
     function emergencyWithdrawBacking() external onlyOwner {
-        require(hasBeenDepleted && fixedEvaAmount == 0, "Not depleted");
+        require(hasBeenDepleted && remainingEvaCovered == 0, "Not depleted");
         uint256 backingBal = backingToken.balanceOf(address(this));
         backingToken.safeTransfer(owner(), backingBal);
         emit EmergencyWithdrawBacking(owner(), backingBal);

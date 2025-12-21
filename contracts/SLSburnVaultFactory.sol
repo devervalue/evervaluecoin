@@ -112,6 +112,9 @@ contract SLSburnVaultFactory is Ownable {
      * @param paused True to pause, false to unpause.
      */
     function setCreationPaused(bool paused) external onlyOwner {
+        if (creationPaused == paused) {
+                return;
+        }
         creationPaused = paused;
         emit CreationPauseToggled(paused);
     }
@@ -131,11 +134,14 @@ contract SLSburnVaultFactory is Ownable {
         return vaultsByBackingToken[backingToken];
     }
 
-    /// @notice True if address was created by this factory.
-    function isValidVault(address vault) external view returns (bool) {
-        return vaultInfo[vault].createdAt > 0;
-    }
-
+/// @notice True if the address was created by this factory (may be depleted).
+function isCreatedVault(address vault) external view returns (bool) {
+    return vaultInfo[vault].createdAt > 0;
+}
+/// @notice True if the address was created by this factory and not depleted.
+function isActiveVault(address vault) external view returns (bool) {
+    return vaultInfo[vault].createdAt > 0 && !vaultDepleted[vault];
+}
     /**
      * @notice Total backing across all vaults for a given token (view-only; O(n)).
      * @param backingToken The backing token address.

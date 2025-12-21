@@ -23,9 +23,40 @@ const config: HardhatUserConfig = {
       url: `https://arb1.arbitrum.io/rpc`,
       accounts: [`0x${process.env.PRIVATE_KEY}`],
     },
+    arbitrumSepolia: {
+      url: process.env.ARBITRUM_SEPOLIA_RPC_URL || "",
+      accounts: process.env.ARBITRUM_SEPOLIA_PRIVATE_KEY ? [`0x${process.env.ARBITRUM_SEPOLIA_PRIVATE_KEY}`] : [],
+    },
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL || "",
+      accounts: process.env.SEPOLIA_PRIVATE_KEY ? [`0x${process.env.SEPOLIA_PRIVATE_KEY}`] : [],
+    },
   },
   etherscan: {
-    apiKey: process.env.ARBITRUMSCAN_API_KEY,
+    apiKey: {
+      sepolia: process.env.ETHERSCAN_API_KEY || "",
+      mainnet: process.env.ETHERSCAN_API_KEY || "",
+      arbitrumSepolia: process.env.ETHERSCAN_API_KEY || "",
+    },
+    customChains: [
+      {
+        network: "sepolia",
+        chainId: 11155111,
+        urls: {
+          // Use Etherscan V2 with explicit chainid to avoid V1 fallback
+          apiURL: "https://api.etherscan.io/v2/api?chainid=11155111",
+          browserURL: "https://sepolia.etherscan.io",
+        },
+      },
+      {
+        network: "arbitrumSepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api?chainid=421614",
+          browserURL: "https://sepolia.arbiscan.io",
+        },
+      },
+    ],
   },
 };
 

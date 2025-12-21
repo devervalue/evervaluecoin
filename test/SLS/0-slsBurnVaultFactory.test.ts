@@ -5,7 +5,7 @@ import {
   SLSburnVaultFactory,
   EverValueCoin,
   Token,
-  EVABurnVault
+  SLSPayer
 } from "../../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -13,6 +13,7 @@ describe("SLSburnVaultFactory - single active vault flow", function () {
   let eva: EverValueCoin;
   let wbtc: Token;
   let factory: SLSburnVaultFactory;
+  let payer: SLSPayer;
 
   let owner: SignerWithAddress;
   let addr1: SignerWithAddress;
@@ -41,6 +42,14 @@ describe("SLSburnVaultFactory - single active vault flow", function () {
     factory = await FactoryFactory.deploy(await eva.getAddress());
     await factory.waitForDeployment();
 
+    const PayerFactory = await ethers.getContractFactory("SLSPayer");
+    payer = await PayerFactory.deploy(
+      await wbtc.getAddress(),
+      owner.address, // dummy burnVault for tests
+      await factory.getAddress(),
+      [owner.address]
+    );
+    await payer.waitForDeployment();
   });
 
   describe("constructor", () => {
@@ -69,7 +78,7 @@ describe("SLSburnVaultFactory - single active vault flow", function () {
       const activeAddr = allVaults[0];
       const vault = await ethers.getContractAt("SLSburnVault", activeAddr);
       expect(await factory.activeVault()).to.equal(activeAddr);
-      expect(await vault.fixedEvaAmount()).to.equal(FIXED_EVA);
+      expect(await vault.remainingEvaCovered()).to.equal(FIXED_EVA);
       expect(await wbtc.balanceOf(activeAddr)).to.equal(INITIAL_WBTC_BACKING);
       expect(await eva.balanceOf(activeAddr)).to.equal(0);
 
@@ -161,9 +170,9 @@ describe("SLSburnVaultFactory - single active vault flow", function () {
       expect(all.length).to.equal(2);
       expect(await factory.getVaultsByBackingToken(await wbtc.getAddress())).to.deep.equal(all);
       expect(await factory.getVaultCount()).to.equal(2);
-      expect(await factory.isValidVault(all[0])).to.equal(true);
-      expect(await factory.isValidVault(all[1])).to.equal(true);
-      expect(await factory.isValidVault(ethers.ZeroAddress)).to.equal(false);
+      expect(await factory.isCreatedVault(all[0])).to.equal(true);
+      expect(await factory.isCreatedVault(all[1])).to.equal(true);
+      expect(await factory.isActiveVault(ethers.ZeroAddress)).to.equal(false);
       expect(await factory.getTotalBackingByToken(await wbtc.getAddress())).to.equal(INITIAL_WBTC_BACKING);
     });
   });
@@ -171,6 +180,13 @@ describe("SLSburnVaultFactory - single active vault flow", function () {
   describe("finalBurnVaultWithdraw", () => {
     it("is removed in this version", async () => {
       expect((factory as any).finalBurnVaultWithdraw).to.equal(undefined);
+    });
+  });
+
+  describe("SLSPayer minimal checks", () => {
+    it("allows owner as caller", async () => {
+      await payer.setCaller(owner.address, true);
+      expect(await payer.isCallerAllowed(owner.address)).to.equal(true);
     });
   });
 });
