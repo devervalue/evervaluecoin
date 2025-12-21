@@ -72,7 +72,7 @@ describe("SLSburnVault - updated logic", function () {
       ).to.be.revertedWith("Cannot set factory to zero address");
       await expect(
         VaultFactory.deploy(await eva.getAddress(), await wbtc.getAddress(), ethers.parseEther("21000001"), await mockFactory.getAddress())
-      ).to.be.revertedWith("Fixed EVA exceeds total supply");
+      ).to.be.revertedWith("Remaining EVA covered amount exceeds total supply");
     });
   });
 
