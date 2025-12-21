@@ -66,7 +66,7 @@ describe("SLSburnVault - updated logic", function () {
       ).to.be.revertedWith("Cannot set backing token to zero address");
       await expect(
         VaultFactory.deploy(await eva.getAddress(), await wbtc.getAddress(), ethers.parseEther("0.5"), await mockFactory.getAddress())
-      ).to.be.revertedWith("Fixed EVA amount must be >= 1 EVA");
+      ).to.be.revertedWith("Remaining EVA covered amount must be >= 1 EVA");
       await expect(
         VaultFactory.deploy(await eva.getAddress(), await wbtc.getAddress(), FIXED_EVA, zero)
       ).to.be.revertedWith("Cannot set factory to zero address");

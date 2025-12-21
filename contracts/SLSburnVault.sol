@@ -84,7 +84,8 @@ contract SLSburnVault is Ownable {
         uint256 effectiveEvaAmount = getEffectiveEvaAmount();
         require(effectiveEvaAmount > 0, "No EVA remaining");
         require(amount <= effectiveEvaAmount, "Amount exceeds remaining EVA");
-
+        require(!hasBeenDepleted, "Vault is depleted");
+        
         uint256 backingBal = backingToken.balanceOf(address(this));
         require(backingBal > 0, "Nothing to withdraw");
 
