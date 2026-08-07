@@ -12,7 +12,13 @@ node_modules
 # solidity-coverage files
 /coverage
 /coverage.json
-/eva_burns_tickets.csv
+/eva_burns_tickets*.csv
 /scripts/getEvaBurns.ts
+
+# Local assistant/session config
+.claude/
 # Hardhat Ignition default folder for deployments against a local node
 ignition/deployments/chain-31337
+
+# Presentation PDF crafting workspace (local only)
+/presentation

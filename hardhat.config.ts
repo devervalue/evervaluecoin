@@ -8,7 +8,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       { version: "0.8.9" },
-      { version: "0.8.20" },
+      { version: "0.8.20", settings: { optimizer: { enabled: true, runs: 200 } } },
       { version: "0.6.6" },
       { version: "0.5.16" },
       { version: "0.4.18" },
@@ -24,8 +24,11 @@ const config: HardhatUserConfig = {
       accounts: [`0x${process.env.PRIVATE_KEY}`],
     },
     arbitrumSepolia: {
-      url: process.env.ARBITRUM_SEPOLIA_RPC_URL || "",
-      accounts: process.env.ARBITRUM_SEPOLIA_PRIVATE_KEY ? [`0x${process.env.ARBITRUM_SEPOLIA_PRIVATE_KEY}`] : [],
+      // Falls back to the SEPOLIA_* vars, which already point at an Arbitrum Sepolia RPC + funded key.
+      url: process.env.ARBITRUM_SEPOLIA_RPC_URL || process.env.SEPOLIA_RPC_URL || "",
+      accounts: (process.env.ARBITRUM_SEPOLIA_PRIVATE_KEY || process.env.SEPOLIA_PRIVATE_KEY)
+        ? [`0x${process.env.ARBITRUM_SEPOLIA_PRIVATE_KEY || process.env.SEPOLIA_PRIVATE_KEY}`]
+        : [],
     },
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL || "",
