@@ -1,0 +1,21 @@
+{
+  "network": "arbitrumSepolia",
+  "chainId": 421614,
+  "deployer": "0x0Fdd62E711Ad775D4Bac0E24CF7EFBd1518c1D0C",
+  "contracts": {
+    "DMO": "0xcEb13950FeE444ab6963A14CD564f8E8975b7F1F",
+    "DWBTC": "0x2ae51885BCAa0B350FB32Bcce0527ce0D5527058",
+    "EVABurnVault": "0xcafc1d8C49aEB1B59B130580C228053Caf18A7c9",
+    "DemoEVALocker": "0x2809238a28E408f22aA1D5039503C23d733cD4a3",
+    "MockSLSFactory": "0x6d7e8b35B722f01FB58eE2B3E6b34772a8eeC78e",
+    "RevenueRouter": "0x19B409EC6F61E819d6C92d316aAea84Bb2e5DfB7",
+    "PositionMarket": "0xeC42b78d1AA7aBdF409226E23943cd4A4f15253c"
+  },
+  "tiers": {
+    "weights": [1, 2, 4, 8, 0],
+    "durations": [7776000, 15552000, 31536000, 63072000, 63072000],
+    "curves": [0, 0, 0, 0, 0],
+    "transferables": [true, true, true, true, false]
+  },
+  "minListAmount": "10000000000000000000"
+}
