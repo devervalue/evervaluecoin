@@ -122,8 +122,10 @@ realize them are described in the sections that follow.
 **Revenue routing**
 - **FR-20** `pay()` splits a WBTC amount across core/SLS/locker by caller-supplied bps that must
   sum to exactly 10,000 (core absorbs rounding); callable only by allowlisted addresses.
-- **FR-21** The SLS portion folds into the core leg when no active SLS vault exists; otherwise it
-  is delivered by direct transfer or `increaseBacking`, per call.
+- **FR-21** The SLS portion folds into the core leg when no active SLS vault exists, or when the
+  active vault's `backingToken` differs from the router's (emitting `SLSTokenMismatch`); otherwise
+  it is delivered by direct transfer or `increaseBacking`, per call. The router never sends WBTC to
+  a vault that cannot pay it back out.
 - **FR-22** The locker leg approves and calls `distribute()` atomically in the same transaction.
 
 **Administration**
@@ -163,7 +165,9 @@ realize them are described in the sections that follow.
 - **TR-9 Integration constraints.** `locker.distributor` must be the router before fees or locker
   payments are enabled (unset distributor waives fees rather than reverting); the router must be an
   authorized payer on the active SLS vault to use `increaseBacking`; the fee path mirrors
-  `EVABurnVault.backingWithdraw`'s zero-payout revert and waives instead of reverting.
+  `EVABurnVault.backingWithdraw`'s zero-payout revert and waives instead of reverting. The router
+  constructor requires `coreVault.wbtcAddress()` and `locker.wbtc()` to equal its `backingToken`
+  (all three are immutable, so a wiring mismatch would be permanent).
 - **TR-10 Observability.** Every state change emits an event; the order book and per-owner
   position snapshots are single-call views — core UX requires no off-chain indexer.
 - **TR-11 Standards.** EVALocker implements ERC-721 + ERC-721Enumerable (ERC-165 supported);
@@ -292,6 +296,16 @@ lockerBps, increaseSLS, additionalEva)` — allowlisted callers only; bps must s
 receives the rounding remainder. SLS leg: `increaseBacking` (requires the router be an authorized
 payer on the active vault) or direct transfer; **folds into core when no active SLS vault exists**.
 Locker leg: approve + `distribute` atomically (router must be the locker's `distributor`).
+
+**SLS token identity guard (audit F-2026-19107).** `SLSburnVaultFactory.createVault` accepts any
+ERC-20 as backing, and an `SLSburnVault` can only ever move its own backing token or EVA — it has no
+generic rescue and is immutable. WBTC transferred to a non-WBTC vault would therefore be lost
+permanently, on every payment. Before either SLS branch the router reads the active vault's
+`backingToken()` and, on mismatch, folds the SLS share into core and emits
+`SLSTokenMismatch(vault, vaultToken, amount)` — an operational alarm, since it means a vault was
+created with the wrong token. Policy: the protocol never creates a non-WBTC SLS vault; the guard makes
+that a checked invariant instead of a convention. `SLSPayer` (superseded by this router) has no such
+guard and cannot be changed on-chain; while it remains the live payer the policy is the only defence.
 `rescue(token, to, amount)` is an owner escape hatch over **any** token including the float — see
 trust model.
 
@@ -344,6 +358,7 @@ renewals):
 | Zero-payout vault burn would revert `lock()` for dust fees | Mirror-and-waive (§4.3) |
 | Zero-payout vault burn would revert `earlyExit()` for dust positions / thin pre-maturity window (audit F-2026-19108) | Mirror-and-waive in `earlyExit` (§4.4) |
 | `buy()` had no buyer-side price bound; seller could raise the ask between quote and settlement (audit F-2026-19104) | `buy(id, maxPrice)` (§5) |
+| Router sent WBTC to the active SLS vault without checking its backing token; a non-WBTC vault would trap it permanently (audit F-2026-19107) | Read `backingToken()`, fold to core on mismatch + `SLSTokenMismatch` event; constructor wiring checks (§6) |
 
 ## 9. Deployment & wiring runbook (order matters)
 

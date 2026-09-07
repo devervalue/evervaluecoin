@@ -76,6 +76,38 @@ describe("RevenueRouter - edge cases & branches", function () {
     await expect(F.deploy(wbtcA, coreA, facA, ethers.ZeroAddress, [])).to.be.revertedWith("locker zero");
   });
 
+  it("constructor rejects sinks wired to a different token (audit F-2026-19107 hardening)", async () => {
+    const F = await ethers.getContractFactory("RevenueRouter");
+    const other = await (await ethers.getContractFactory("Token")).deploy(E8("1000000"), "Other", "OTH", 8);
+    const otherA = await other.getAddress();
+    const facA = await factory.getAddress();
+
+    // Core vault backed by a different token than the router moves.
+    const otherCore = await (await ethers.getContractFactory("EVABurnVault")).deploy(await eva.getAddress(), otherA);
+    await expect(
+      F.deploy(await wbtc.getAddress(), await otherCore.getAddress(), facA, await locker.getAddress(), [])
+    ).to.be.revertedWith("coreVault token mismatch");
+
+    // Locker rewarding in a different token than the router moves.
+    const otherLocker = await (await ethers.getContractFactory("EVALocker")).deploy(
+      await eva.getAddress(),
+      otherA,
+      await coreVault.getAddress(),
+      WEIGHTS,
+      DURATIONS,
+      CURVES,
+      TRANSFERABLES
+    );
+    await expect(
+      F.deploy(await wbtc.getAddress(), await coreVault.getAddress(), facA, await otherLocker.getAddress(), [])
+    ).to.be.revertedWith("locker token mismatch");
+
+    // Router configured for the other token against WBTC sinks fails the same way.
+    await expect(
+      F.deploy(otherA, await coreVault.getAddress(), facA, await locker.getAddress(), [])
+    ).to.be.revertedWith("coreVault token mismatch");
+  });
+
   it("pay rejects zero amount", async () => {
     await expect(router.connect(caller).pay(0, 10000, 0, 0, false, 0)).to.be.revertedWith("amount is zero");
   });

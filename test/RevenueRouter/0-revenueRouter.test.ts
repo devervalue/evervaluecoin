@@ -138,4 +138,58 @@ describe("RevenueRouter", function () {
     await router.rescue(await wbtc.getAddress(), owner.address, E8("10"));
     expect(await wbtc.balanceOf(owner.address)).to.equal(before + E8("10"));
   });
+
+  // Audit F-2026-19107: the factory can create a vault around any ERC-20; a vault only ever moves its
+  // own backing token or EVA, so WBTC sent to a non-WBTC vault would be stuck forever.
+  describe("SLS vault token identity guard", () => {
+    let usdt: Token;
+    let foreignVault: MockSLSVaultForRouter;
+
+    beforeEach(async () => {
+      usdt = await (await ethers.getContractFactory("Token")).deploy(E8("1000000"), "Tether", "USDT", 6);
+      foreignVault = await (await ethers.getContractFactory("MockSLSVaultForRouter")).deploy(await usdt.getAddress());
+      await factory.setActiveVault(await foreignVault.getAddress());
+    });
+
+    it("direct-transfer path: folds the SLS share into core and emits SLSTokenMismatch, no WBTC reaches the vault", async () => {
+      const coreBefore = await wbtc.balanceOf(await coreVault.getAddress());
+      await expect(router.connect(caller).pay(E8("100"), 5000, 3000, 2000, false, 0))
+        .to.emit(router, "SLSTokenMismatch")
+        .withArgs(await foreignVault.getAddress(), await usdt.getAddress(), E8("30"))
+        .and.to.emit(router, "PaymentExecuted")
+        .withArgs(caller.address, E8("100"), E8("80"), 0, E8("20"), false, 0);
+
+      expect(await wbtc.balanceOf(await foreignVault.getAddress())).to.equal(0);
+      expect((await wbtc.balanceOf(await coreVault.getAddress())) - coreBefore).to.equal(E8("80"));
+      expect(await locker.pending(0)).to.equal(E8("20"));
+    });
+
+    it("increaseBacking path: folds instead of reverting, vault pulls nothing", async () => {
+      const coreBefore = await wbtc.balanceOf(await coreVault.getAddress());
+      await expect(router.connect(caller).pay(E8("100"), 5000, 3000, 2000, true, E18("5")))
+        .to.emit(router, "SLSTokenMismatch")
+        .withArgs(await foreignVault.getAddress(), await usdt.getAddress(), E8("30"));
+
+      expect(await foreignVault.totalPulled()).to.equal(0);
+      expect(await wbtc.allowance(await router.getAddress(), await foreignVault.getAddress())).to.equal(0);
+      expect((await wbtc.balanceOf(await coreVault.getAddress())) - coreBefore).to.equal(E8("80"));
+    });
+
+    it("repeated payments never leak WBTC to the foreign vault", async () => {
+      for (let i = 0; i < 3; i++) {
+        await router.connect(caller).pay(E8("10"), 0, 10000, 0, i % 2 === 0, 0);
+      }
+      expect(await wbtc.balanceOf(await foreignVault.getAddress())).to.equal(0);
+      expect(await wbtc.balanceOf(await coreVault.getAddress())).to.equal(E8("30"));
+    });
+
+    it("a matching-token vault is unaffected by the guard (no mismatch event)", async () => {
+      await factory.setActiveVault(await slsVault.getAddress()); // WBTC-backed mock
+      await expect(router.connect(caller).pay(E8("100"), 5000, 3000, 2000, false, 0)).to.not.emit(
+        router,
+        "SLSTokenMismatch"
+      );
+      expect(await wbtc.balanceOf(await slsVault.getAddress())).to.equal(E8("30"));
+    });
+  });
 });

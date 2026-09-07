@@ -8,6 +8,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// @dev Local view of the legacy `SLSburnVault` contract (name kept CapWords per the style guide).
 interface ISLSBurnVault {
     function increaseBacking(uint256 additionalEva, uint256 backingAmount) external;
+    function backingToken() external view returns (IERC20);
 }
 
 /// @dev Local view of the legacy SLS vault factory; read for the currently active vault.
@@ -18,6 +19,12 @@ interface ISLSBurnVaultFactory {
 /// @dev Minimal EVALocker surface used by the router (rewards are pulled via transferFrom).
 interface IEVALocker {
     function distribute(uint256 amount) external;
+    function wbtc() external view returns (IERC20);
+}
+
+/// @dev Local view of the legacy core `EVABurnVault`; read once at construction to verify wiring.
+interface ICoreBurnVault {
+    function wbtcAddress() external view returns (address);
 }
 
 /**
@@ -64,6 +71,10 @@ contract RevenueRouter is Ownable {
     );
     /// @notice Tokens were recovered by the owner via the escape hatch.
     event Rescue(address indexed token, address indexed to, uint256 amount);
+    /// @notice The active SLS vault is backed by a different token; its share was folded into the core leg.
+    /// @dev Operational alarm: this means an SLS vault was created with a non-WBTC backing token. The
+    ///      router never sends WBTC to such a vault because the vault can only ever move its own token.
+    event SLSTokenMismatch(address indexed vault, address indexed vaultToken, uint256 foldedAmount);
 
     /// @dev Restricts pay() to the allowlisted operational callers.
     modifier onlyAllowed() {
@@ -89,6 +100,10 @@ contract RevenueRouter is Ownable {
         require(_coreVault != address(0), "coreVault zero");
         require(_factory != address(0), "factory zero");
         require(_locker != address(0), "locker zero");
+        // Wiring checks: every sink is immutable, so a token mismatch here would be permanent. The core
+        // vault and the locker both expose their WBTC; require it to be the token this router moves.
+        require(ICoreBurnVault(_coreVault).wbtcAddress() == _backingToken, "coreVault token mismatch");
+        require(address(IEVALocker(_locker).wbtc()) == _backingToken, "locker token mismatch");
 
         backingToken = IERC20(_backingToken);
         coreVault = _coreVault;
@@ -129,7 +144,15 @@ contract RevenueRouter is Ownable {
         // SLS leg
         address active = factory.activeVault();
         if (slsAmount > 0 && active != address(0)) {
-            if (increaseSLS) {
+            // Token identity guard: the factory can create a vault around any ERC-20, and a vault only
+            // ever pays out its own backing token or EVA. WBTC sent to a non-WBTC vault would be stuck
+            // forever, so on mismatch the SLS share folds into core instead (same as "no active vault").
+            IERC20 vaultToken = ISLSBurnVault(active).backingToken();
+            if (vaultToken != backingToken) {
+                emit SLSTokenMismatch(active, address(vaultToken), slsAmount);
+                coreAmount += slsAmount;
+                slsAmount = 0;
+            } else if (increaseSLS) {
                 backingToken.forceApprove(active, 0);
                 backingToken.forceApprove(active, slsAmount);
                 ISLSBurnVault(active).increaseBacking(additionalEva, slsAmount);

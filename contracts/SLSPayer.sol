@@ -18,6 +18,12 @@ interface ISLSburnVaultFactory {
  * @notice Funds distribution contract for periodic payments to the legacy burn vault and the active SLS vault.
  * @dev Assumes this contract holds backing tokens (e.g., WBTC) and, if using increaseBacking,
  *      is both the owner of the active SLS vault and authorized as a payer on that vault.
+ *
+ *      SUPERSEDED by `RevenueRouter`, which adds the EVALocker leg and an SLS vault token-identity
+ *      guard (audit F-2026-19107). This contract is kept for reference only and is not part of the
+ *      go-forward deployment. Its `pay` transfers `backingToken` to whatever vault the factory reports
+ *      as active without checking that vault's backing token; while it remains the live payer the
+ *      operational rule is: never create an SLS vault with a backing token other than WBTC.
  */
 contract SLSPayer is Ownable {
     using SafeERC20 for IERC20;
