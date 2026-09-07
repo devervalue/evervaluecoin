@@ -79,6 +79,47 @@ describe("EVALocker - renewal offer cleared on burn paths", function () {
     expect(await wbtc.balanceOf(owner.address)).to.equal(ownerWbtc + E8("1"));
   });
 
+  // Audit F-2026-19105: refunds go to owner(); a renounced owner (address(0)) would make every
+  // withdraw/earlyExit/transfer of a position carrying a prize offer revert. renounceOwnership is disabled.
+  describe("renounceOwnership is disabled (owner() can never be address(0))", () => {
+    it("reverts for the owner, with and without an active prize offer", async () => {
+      await expect(locker.renounceOwnership()).to.be.revertedWith("renounce disabled");
+      await lockAndPropose(); // prize offer now active
+      await expect(locker.renounceOwnership()).to.be.revertedWith("renounce disabled");
+      expect(await locker.owner()).to.equal(owner.address);
+    });
+
+    it("reverts for non-owners too", async () => {
+      await expect(locker.connect(alice).renounceOwnership()).to.be.revertedWith("renounce disabled");
+    });
+
+    it("transferOwnership still works and refunds then go to the new owner", async () => {
+      const id = await lockAndPropose();
+      await locker.transferOwnership(alice.address);
+      expect(await locker.owner()).to.equal(alice.address);
+      // holder exits early; escrow refund lands on the new owner, exit is not blocked
+      const aliceEva = await eva.balanceOf(alice.address);
+      const aliceWbtc = await wbtc.balanceOf(alice.address);
+      await locker.connect(alice).earlyExit(id);
+      expect((await locker.offers(id)).active).to.equal(false);
+      expect(await locker.evaEscrow()).to.equal(0);
+      expect(await locker.wbtcEscrow()).to.equal(0);
+      // alice is both holder and new owner here: she receives the 50 EVA escrow refund plus her
+      // liquid slice, and the 1 WBTC escrow refund plus her burn proceeds
+      expect(await eva.balanceOf(alice.address)).to.be.greaterThanOrEqual(aliceEva + E18("50"));
+      expect(await wbtc.balanceOf(alice.address)).to.be.greaterThanOrEqual(aliceWbtc + E8("1"));
+    });
+
+    it("the auditor's freeze scenario is unreachable: exits with an active prize offer always succeed", async () => {
+      const id = await lockAndPropose();
+      // An expired offer cannot be accepted or cleared by the holder; only the refund path clears it.
+      await increase(100001);
+      await expect(locker.connect(alice).acceptRenewal(id)).to.be.revertedWith("offer expired");
+      // The exit still works because owner() is a live address and cannot be renounced.
+      await expect(locker.connect(alice).earlyExit(id)).to.emit(locker, "EarlyExited");
+    });
+  });
+
   it("earlyExit refunds the pending offer's escrow to the admin", async () => {
     const id = await lockAndPropose();
 

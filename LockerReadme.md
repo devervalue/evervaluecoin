@@ -333,6 +333,7 @@ deal of an existing position.** Positions snapshot shares, curve, endTime and de
 | `sweepWbtc` / `sweepEva` | EVALocker | Strays only: reserves `totalUnclaimedRewards + wbtcEscrow` / `lockedEvaTotal + evaEscrow` |
 | `proposeRenewal` / `cancelRenewal` | EVALocker | Prize escrowed up front; holder must opt in; cancel refunds admin only; can only extend, never shorten (`newEnd >= endTime`) |
 | `setBaseURI` | EVALocker | Metadata only |
+| `renounceOwnership` | EVALocker | **Disabled** (always reverts). Escrow refunds are paid to `owner()` from inside holder exits, so an ownerless locker would freeze positions carrying a prize offer. Ownership can be transferred, never dropped; `owner() == 0` is unreachable |
 | `setMinListAmount` | PositionMarket | New listings only |
 | `setCaller` | RevenueRouter | Gates `pay()` |
 | `rescue` | RevenueRouter | ⚠ **Unbounded over the router's balance** — deliberate escape hatch; the float is operational funds, not user deposits. Mitigation: owner should be a multisig (ops requirement). |
@@ -370,6 +371,7 @@ renewals):
 | `buy()` had no buyer-side price bound; seller could raise the ask between quote and settlement (audit F-2026-19104) | `buy(id, maxPrice)` (§5) |
 | Router sent WBTC to the active SLS vault without checking its backing token; a non-WBTC vault would trap it permanently (audit F-2026-19107) | Read `backingToken()`, fold to core on mismatch + `SLSTokenMismatch` event; constructor wiring checks (§6) |
 | Renewal with `keepRemaining = false` could shorten a live position and let it withdraw early with no burn (audit F-2026-19110) | `newEnd >= endTime` at acceptance, pre-checked at proposal (§4.5) |
+| `renounceOwnership` would make `_refundOffer` transfer to address(0), freezing withdraw/earlyExit/transfer of any position with a prize offer (audit F-2026-19105) | `renounceOwnership` overridden to always revert (§7) |
 
 ## 9. Deployment & wiring runbook (order matters)
 
@@ -389,7 +391,7 @@ into `undistributed` (counted as liability, unrecoverable by sweep) until weight
 ## 10. Tests & coverage
 
 `npx hardhat test test/EVALocker/*.test.ts test/PositionMarket/*.test.ts test/RevenueRouter/*.test.ts`
-— **168 passing.** Coverage (`npx hardhat coverage --testfiles "test/{EVALocker,PositionMarket,RevenueRouter}/*.test.ts"`):
+— **172 passing.** Coverage (`npx hardhat coverage --testfiles "test/{EVALocker,PositionMarket,RevenueRouter}/*.test.ts"`):
 
 | Contract | Stmts | Branch | Funcs | Lines | Uncovered |
 |---|---|---|---|---|---|

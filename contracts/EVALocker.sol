@@ -653,6 +653,18 @@ contract EVALocker is ERC721, ERC721Enumerable, Ownable, ReentrancyGuard {
         emit MinLockAmountUpdated(amount);
     }
 
+    /**
+     * @notice Disabled. The locker must always have an owner: renewal escrow refunds in `_refundOffer`
+     *         are paid to `owner()` from inside `withdraw` / `earlyExit` / transfers, and an ERC-20
+     *         transfer to address(0) reverts — so a renounced owner would freeze every position that
+     *         carries a prize offer (audit F-2026-19105). Ownership can be transferred, never dropped.
+     * @dev Together with `Ownable.transferOwnership` rejecting address(0), this makes `owner() == 0`
+     *      unreachable for the life of the contract.
+     */
+    function renounceOwnership() public pure override {
+        revert("renounce disabled");
+    }
+
     /// @notice Set the base URI for off-chain token metadata (tokenURI = baseURI + tokenId).
     function setBaseURI(string calldata uri) external onlyOwner {
         _baseTokenURI = uri;
