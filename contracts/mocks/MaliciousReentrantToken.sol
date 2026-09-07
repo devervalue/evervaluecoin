@@ -15,7 +15,7 @@ interface ILockerReenter {
 
 /// @notice Market function the malicious token attempts to re-enter.
 interface IMarketReenter {
-    function buy(uint256 id) external;
+    function buy(uint256 id, uint256 maxPrice) external;
 }
 
 /**
@@ -59,7 +59,7 @@ contract MaliciousReentrantToken is ERC20 {
         else if (mode == 3) ILockerReenter(target).acceptRenewal(arg);
         else if (mode == 4) ILockerReenter(target).lock(0, arg);
         else if (mode == 5) ILockerReenter(target).distribute(arg);
-        else IMarketReenter(target).buy(arg);
+        else IMarketReenter(target).buy(arg, type(uint256).max);
     }
 
     function transfer(address to, uint256 amount) public override returns (bool) {

@@ -126,12 +126,12 @@ describe("PositionMarket - staleness, prune & fulfillability", function () {
       await locker.proposeRenewal(id, 10 * DAY, true, 0, 0, (await now()) + 1000);
       await locker.connect(seller).acceptRenewal(id);
 
-      await expect(market.connect(buyer).buy(id)).to.be.revertedWith("not buyable");
+      await expect(market.connect(buyer).buy(id, E8("0.5"))).to.be.revertedWith("not buyable");
 
       // seller re-lists -> re-snapshots startTime -> buyable again
       await market.connect(seller).list(id, E8("0.5"));
       expect(await market.isFulfillable(id)).to.equal(true);
-      await expect(market.connect(buyer).buy(id)).to.not.be.reverted;
+      await expect(market.connect(buyer).buy(id, E8("0.5"))).to.not.be.reverted;
       expect(await locker.ownerOf(id)).to.equal(buyer.address);
     });
   });

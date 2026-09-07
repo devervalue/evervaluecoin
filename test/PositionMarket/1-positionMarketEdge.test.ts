@@ -101,11 +101,11 @@ describe("PositionMarket - edge cases & branches", function () {
     await mal.transfer(buyer.address, E8("10"));
     await mal.connect(buyer).approve(await market.getAddress(), ethers.MaxUint256);
 
-    // arm the token to re-enter market.buy(0) during the payment transfer
+    // arm the token to re-enter market.buy(0, max) during the payment transfer
     await mal.configure(await market.getAddress(), 6, 0);
     await mal.arm(true);
 
-    await expect(market.connect(buyer).buy(0)).to.be.revertedWithCustomError(
+    await expect(market.connect(buyer).buy(0, E8("1"))).to.be.revertedWithCustomError(
       market,
       "ReentrancyGuardReentrantCall"
     );

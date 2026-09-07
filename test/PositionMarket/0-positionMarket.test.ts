@@ -134,7 +134,7 @@ describe("PositionMarket", function () {
       await market.connect(seller).list(id, E8("0.5"));
 
       const sellerWbtc = await wbtc.balanceOf(seller.address);
-      await market.connect(buyer).buy(id);
+      await market.connect(buyer).buy(id, E8("0.5"));
 
       expect(await locker.ownerOf(id)).to.equal(buyer.address);
       expect(await wbtc.balanceOf(seller.address)).to.equal(sellerWbtc + E8("0.5"));
@@ -148,7 +148,7 @@ describe("PositionMarket", function () {
       await market.connect(seller).list(id, E8("0.5"));
 
       const sellerWbtc = await wbtc.balanceOf(seller.address);
-      await market.connect(buyer).buy(id);
+      await market.connect(buyer).buy(id, E8("0.5"));
       // seller gets sale price (0.5) + settled rewards (3)
       expect(await wbtc.balanceOf(seller.address)).to.equal(sellerWbtc + E8("3.5"));
       // buyer owns a clean position
@@ -156,7 +156,7 @@ describe("PositionMarket", function () {
     });
 
     it("reverts on an unlisted token", async () => {
-      await expect(market.connect(buyer).buy(999)).to.be.revertedWith("not buyable");
+      await expect(market.connect(buyer).buy(999, E8("1"))).to.be.revertedWith("not buyable");
     });
 
     it("reverts if the seller no longer owns the position (stale listing)", async () => {
@@ -164,7 +164,7 @@ describe("PositionMarket", function () {
       await market.connect(seller).list(id, E8("0.5"));
       // seller transfers the NFT away outside the market
       await locker.connect(seller).transferFrom(seller.address, owner.address, id);
-      await expect(market.connect(buyer).buy(id)).to.be.revertedWith("not buyable");
+      await expect(market.connect(buyer).buy(id, E8("0.5"))).to.be.revertedWith("not buyable");
     });
 
     it("is atomic: buyer keeps WBTC if the market is not approved", async () => {
@@ -173,8 +173,74 @@ describe("PositionMarket", function () {
       await locker.connect(seller).setApprovalForAll(await market.getAddress(), false);
 
       const buyerWbtc = await wbtc.balanceOf(buyer.address);
-      await expect(market.connect(buyer).buy(id)).to.be.reverted; // NFT transfer fails -> whole tx reverts
+      await expect(market.connect(buyer).buy(id, E8("0.5"))).to.be.reverted; // NFT transfer fails -> whole tx reverts
       expect(await wbtc.balanceOf(buyer.address)).to.equal(buyerWbtc); // refunded by revert
+    });
+  });
+
+  describe("buy price bound (maxPrice)", () => {
+    it("reverts when the seller raised the ask above the buyer's maxPrice", async () => {
+      const id = await sellerLocks(0, E18("100"));
+      await market.connect(seller).list(id, E8("0.5"));
+      await market.connect(seller).updatePrice(id, E8("50"));
+
+      const buyerWbtc = await wbtc.balanceOf(buyer.address);
+      await expect(market.connect(buyer).buy(id, E8("0.5"))).to.be.revertedWith("price above max");
+      expect(await wbtc.balanceOf(buyer.address)).to.equal(buyerWbtc); // nothing pulled
+      expect(await locker.ownerOf(id)).to.equal(seller.address);
+      expect(await market.isFulfillable(id)).to.equal(true); // listing itself is still live
+    });
+
+    it("succeeds when maxPrice equals the stored ask", async () => {
+      const id = await sellerLocks(0, E18("100"));
+      await market.connect(seller).list(id, E8("0.5"));
+      await expect(market.connect(buyer).buy(id, E8("0.5"))).to.not.be.reverted;
+      expect(await locker.ownerOf(id)).to.equal(buyer.address);
+    });
+
+    it("pays the lower stored ask when the seller reduced the price below maxPrice", async () => {
+      const id = await sellerLocks(0, E18("100"));
+      await market.connect(seller).list(id, E8("0.5"));
+      await market.connect(seller).updatePrice(id, E8("0.3"));
+
+      const buyerWbtc = await wbtc.balanceOf(buyer.address);
+      const sellerWbtc = await wbtc.balanceOf(seller.address);
+      await expect(market.connect(buyer).buy(id, E8("0.5")))
+        .to.emit(market, "Sold")
+        .withArgs(id, seller.address, buyer.address, E8("0.3"));
+      expect(await wbtc.balanceOf(buyer.address)).to.equal(buyerWbtc - E8("0.3"));
+      expect(await wbtc.balanceOf(seller.address)).to.equal(sellerWbtc + E8("0.3"));
+    });
+
+    it("blocks the audit scenario: list + updatePrice in the same block, buy at the quoted price", async () => {
+      const id = await sellerLocks(0, E18("100"));
+
+      // Seller lists cheap and raises the ask in the same block (the buyer has unlimited approval).
+      // Explicit nonces + identical gas price make the in-block ordering deterministic (list first).
+      const nonce = await ethers.provider.getTransactionCount(seller.address);
+      const gas = { gasLimit: 300_000, gasPrice: ethers.parseUnits("10", "gwei") };
+      await ethers.provider.send("evm_setAutomine", [false]);
+      const tx1 = await market.connect(seller).list(id, E8("0.5"), { ...gas, nonce });
+      const tx2 = await market.connect(seller).updatePrice(id, E8("90"), { ...gas, nonce: nonce + 1 });
+      await ethers.provider.send("evm_mine", []);
+      await ethers.provider.send("evm_setAutomine", [true]);
+      const [r1, r2] = await Promise.all([tx1.wait(), tx2.wait()]);
+      expect(r1!.blockNumber).to.equal(r2!.blockNumber); // same block
+      expect(r1!.status).to.equal(1);
+      expect(r2!.status).to.equal(1);
+      expect((await market.listings(id)).price).to.equal(E8("90"));
+
+      // Buyer submits with the price they were quoted: bounded, so the raised ask cannot be pulled.
+      const buyerWbtc = await wbtc.balanceOf(buyer.address);
+      await expect(market.connect(buyer).buy(id, E8("0.5"))).to.be.revertedWith("price above max");
+      expect(await wbtc.balanceOf(buyer.address)).to.equal(buyerWbtc);
+    });
+
+    it("re-listing at a higher price is bounded the same way", async () => {
+      const id = await sellerLocks(0, E18("100"));
+      await market.connect(seller).list(id, E8("0.5"));
+      await market.connect(seller).list(id, E8("60")); // overwrite path, not updatePrice
+      await expect(market.connect(buyer).buy(id, E8("0.5"))).to.be.revertedWith("price above max");
     });
   });
 

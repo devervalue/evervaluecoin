@@ -164,16 +164,22 @@ contract PositionMarket is Ownable, ReentrancyGuard {
     /**
      * @notice Buy a listed position. Pays the seller in WBTC and receives the position NFT atomically.
      * @param id The listed tokenId to buy; must be fulfillable (see isFulfillable).
+     * @param maxPrice The most WBTC the buyer is willing to pay. The stored ask is read at execution, so
+     *        without this bound a seller could raise the price between the buyer's quote and settlement
+     *        and pull up to the buyer's full WBTC allowance. The buy reverts if the ask exceeds it; if the
+     *        ask was lowered in the meantime the buyer pays the lower stored price.
      * @dev Requires the buyer to have approved this contract for `price` WBTC, and the seller to have
      *      approved this contract on the NFT. The NFT transfer settles the position's accrued rewards to
      *      the seller via the locker's transfer hook.
      */
-    function buy(uint256 id) external nonReentrant {
+    function buy(uint256 id, uint256 maxPrice) external nonReentrant {
         // Single source of truth: listed + seller still owns + market approved + not renewed.
         // The locker's transferFrom is the final backstop on ownership/approval.
         require(isFulfillable(id), "not buyable");
 
         Listing memory l = listings[id];
+        // Buyer-side price bound: isFulfillable is deliberately liveness-only and never reads price.
+        require(l.price <= maxPrice, "price above max");
         address seller = l.seller;
         uint256 price = l.price;
 
@@ -265,8 +271,8 @@ contract PositionMarket is Ownable, ReentrancyGuard {
 
     /// @dev O(1) removal from the active set via swap-and-pop, and clears the listing.
     function _removeListing(uint256 id) internal {
-        // Only ever called by cancel()/buy(), both of which require the listing exists first,
-        // so listingIndex[id] is always non-zero here.
+        // Only ever called by cancel()/pruneStale()/buy(), all of which require the listing exists
+        // first, so listingIndex[id] is always non-zero here.
         uint256 idx = listingIndex[id] - 1;
         uint256 lastIdx = activeListings.length - 1;
         if (idx != lastIdx) {

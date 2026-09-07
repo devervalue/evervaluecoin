@@ -96,7 +96,7 @@ describe("PositionMarket — owner liveness while listed", function () {
 
     // claiming does not invalidate the sale offer
     expect(await market.isFulfillable(id)).to.equal(true);
-    await market.connect(buyer).buy(id);
+    await market.connect(buyer).buy(id, E8("1"));
     expect(await locker.ownerOf(id)).to.equal(buyer.address);
   });
 
@@ -109,7 +109,7 @@ describe("PositionMarket — owner liveness while listed", function () {
 
     // the market is left with a dead entry: not buyable, prunable by anyone
     expect(await market.isFulfillable(id)).to.equal(false);
-    await expect(market.connect(buyer).buy(id)).to.be.revertedWith("not buyable");
+    await expect(market.connect(buyer).buy(id, E8("1"))).to.be.revertedWith("not buyable");
     await market.connect(buyer).pruneStale(id);
     expect(await market.activeListingCount()).to.equal(0);
   });
@@ -123,7 +123,7 @@ describe("PositionMarket — owner liveness while listed", function () {
     expect((await eva.balanceOf(seller.address)) - before).to.equal(E18("100"));
 
     expect(await market.isFulfillable(id)).to.equal(false); // ownerOf reverts -> caught -> false
-    await expect(market.connect(buyer).buy(id)).to.be.revertedWith("not buyable");
+    await expect(market.connect(buyer).buy(id, E8("1"))).to.be.revertedWith("not buyable");
     await market.connect(friend).pruneStale(id);
   });
 
@@ -133,7 +133,7 @@ describe("PositionMarket — owner liveness while listed", function () {
 
     await locker.connect(seller).earlyExit(id); // burns the NFT
     expect(await market.isFulfillable(id)).to.equal(false);
-    await expect(market.connect(buyer).buy(id)).to.be.revertedWith("not buyable");
+    await expect(market.connect(buyer).buy(id, E8("1"))).to.be.revertedWith("not buyable");
   });
 
   it("revoking approval or cancelling instantly de-fangs the listing", async () => {
@@ -142,7 +142,7 @@ describe("PositionMarket — owner liveness while listed", function () {
     // revoke the operator approval: no longer buyable, position untouched
     await locker.connect(seller).setApprovalForAll(marketAddr, false);
     expect(await market.isFulfillable(id)).to.equal(false);
-    await expect(market.connect(buyer).buy(id)).to.be.revertedWith("not buyable");
+    await expect(market.connect(buyer).buy(id, E8("1"))).to.be.revertedWith("not buyable");
 
     // re-approve: buyable again (the offer stands until cancelled)
     await locker.connect(seller).setApprovalForAll(marketAddr, true);

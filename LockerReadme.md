@@ -112,6 +112,10 @@ realize them are described in the sections that follow.
 - **FR-19** A buy succeeds only if the listing is fulfillable: listed ∧ seller still owns ∧ market
   still approved ∧ not renewed since listing. Anyone can prune unfulfillable listings; a position
   must hold `>= minListAmount` EVA to be listed.
+- **FR-19b (buyer price bound)** `buy(id, maxPrice)` reverts if the stored ask exceeds the buyer's
+  `maxPrice`. The ask is read at execution and the seller can change it at any time, so without this
+  bound a buyer with a standing WBTC allowance could be charged an arbitrarily raised price. A lowered
+  ask settles at the lower stored price.
 
 **Revenue routing**
 - **FR-20** `pay()` splits a WBTC amount across core/SLS/locker by caller-supplied bps that must
@@ -251,10 +255,12 @@ entrypoints are guarded. Metadata: `tokenURI = baseURI + tokenId` (off-chain ser
 
 Approval-based (no escrow): sellers keep custody — and keep earning — until sale. `list` snapshots
 `position.startTime`; `isFulfillable(id)` = listed ∧ seller still owns ∧ market still approved ∧
-`startTime` unchanged (i.e. not renewed since listing). `buy()` (nonReentrant) requires
-`isFulfillable`, deletes the listing (effects first), pays the seller (`safeTransferFrom` buyer →
-seller — the market never holds WBTC), then `transferFrom`s the NFT (locker hook settles the
-seller's accrued rewards). The NFT transfer uses `transferFrom`, **not** `safeTransferFrom` — no
+`startTime` unchanged (i.e. not renewed since listing). `buy(id, maxPrice)` (nonReentrant) requires
+`isFulfillable`, then requires the stored ask `<= maxPrice` (buyer-side bound: `isFulfillable` is
+liveness-only and never reads price, so a seller's `updatePrice`/re-`list` between quote and
+settlement cannot pull more than the buyer authorised), deletes the listing (effects first), pays the
+seller (`safeTransferFrom` buyer → seller — the market never holds WBTC), then `transferFrom`s the
+NFT (locker hook settles the seller's accrued rewards). The NFT transfer uses `transferFrom`, **not** `safeTransferFrom` — no
 `onERC721Received` callback to the buyer, eliminating the classic marketplace reentrancy vector.
 The locker's own guarded `transferFrom` is the final backstop on ownership/approval/soulbound.
 
