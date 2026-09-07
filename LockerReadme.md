@@ -363,13 +363,13 @@ into `undistributed` (counted as liability, unrecoverable by sweep) until weight
 ## 10. Tests & coverage
 
 `npx hardhat test test/EVALocker/*.test.ts test/PositionMarket/*.test.ts test/RevenueRouter/*.test.ts`
-— **148 passing.** Coverage (`npx hardhat coverage --testfiles "test/{EVALocker,PositionMarket,RevenueRouter}/*.test.ts"`):
+— **157 passing.** Coverage (`npx hardhat coverage --testfiles "test/{EVALocker,PositionMarket,RevenueRouter}/*.test.ts"`):
 
 | Contract | Stmts | Branch | Funcs | Lines | Uncovered |
 |---|---|---|---|---|---|
 | PositionMarket | 100% | 100% | 100% | 100% | — |
 | RevenueRouter | 100% | 97% | 100% | 100% | one defensive SLS-leg branch permutation |
-| EVALocker | ~99% | ~94% | ~97% | ~99.6% | mandated `_increaseBalance` override (unreachable without ERC721Consecutive); false-sides of defensive guards (`supply > 0`, `received > 0`) |
+| EVALocker | ~99% | ~93.4% | ~97% | ~99.6% | mandated `_increaseBalance` override (unreachable without ERC721Consecutive); false-sides of defensive guards (`supply > 0` in `lock`, `supply == 0` arm in `earlyExit`, `received > 0`) |
 
 Suite map: `0` core flows · `1` edge cases · `2` branch completion · `3` reentrancy (malicious token
 modes 0–6, incl. `market.buy`) · `4` hard cases · `5` stateful invariant fuzz · `6` transfer/settle ·
