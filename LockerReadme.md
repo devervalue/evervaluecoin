@@ -88,7 +88,9 @@ realize them are described in the sections that follow.
   NFT is burned.
 - **FR-12** Before `endTime` the owner can exit at any moment: they keep `curve(elapsed/duration)`
   of the principal as liquid EVA; the remainder is force-burned against the core vault and the
-  redeemed backing is forwarded to the owner; the NFT is burned.
+  redeemed backing is forwarded to the owner; the NFT is burned. If the burn slice would redeem to
+  zero sats (the vault rejects such burns), the vault call is skipped and that slice is returned as
+  liquid EVA instead, so early exit can never revert through the vault (§4.4).
 - **FR-13 (owner liveness)** Claiming, withdrawing, early-exiting and transferring must never be
   blockable — by the admin (no pause covers them), by the market or its participants, or by any
   third party. Races resolve in the owner's favor.
@@ -236,6 +238,16 @@ QUADRATIC `f²`, SQRT `√f` (f = elapsed/duration, clamped to 1). The remainder
 other curves exist for possible future tiers (a tier's curve applies to **future locks only** —
 each position snapshots its curve at lock time).
 
+**Zero-sat burn waiver (mirror-and-waive, same rule as the lock fee).** The core vault reverts on a
+burn whose payout `burnEva × B / S` floors to 0 (B = vault WBTC, S = EVA supply). Without a guard,
+`earlyExit` would revert for any burn slice below `S/B` — dust positions permanently, and every
+position in a thin window just before `endTime` — forcing the holder to wait for maturity. `earlyExit`
+therefore mirrors the vault's formula and, when the payout would be 0, skips the vault and folds the
+slice into the liquid EVA returned (`EarlyExited.evaBurned = 0`). This waiver cannot be gamed: the
+vault's only outflow burns EVA pro-rata (`(B − a·B/S)/(S − a) = B/S`, slightly higher after the payout
+floor) and revenue only adds to B, so `B/S` is monotonically non-decreasing and the `S/B` threshold
+can only shrink. The waived slice is always worth < 1 sat of backing.
+
 ### 4.5 Renewals (opt-in, escrow-backed)
 Admin `proposeRenewal(id, extraDuration, keepRemaining, rewardEva, rewardWbtc, offerExpiry)` escrows
 the prize up front; only the position owner can `acceptRenewal`. Accept settles pending rewards,
@@ -330,6 +342,8 @@ renewals):
 | Floored fresh `rewardDebt` allowed ≤1 sat over-credit per lock/renewal; strict fuzz produced `Σ pending = liability + 1 sat` | Ceil fresh debts (`Math.ceilDiv`) + saturating settle/views (§4.1) |
 | Sub-day renewal could land shares in an already-processed epoch bucket → stranded `totalShares` + bricked position | Future-epoch guards in `lock`/`acceptRenewal` (§4.2) |
 | Zero-payout vault burn would revert `lock()` for dust fees | Mirror-and-waive (§4.3) |
+| Zero-payout vault burn would revert `earlyExit()` for dust positions / thin pre-maturity window (audit F-2026-19108) | Mirror-and-waive in `earlyExit` (§4.4) |
+| `buy()` had no buyer-side price bound; seller could raise the ask between quote and settlement (audit F-2026-19104) | `buy(id, maxPrice)` (§5) |
 
 ## 9. Deployment & wiring runbook (order matters)
 

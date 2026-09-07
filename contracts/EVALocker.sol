@@ -421,6 +421,19 @@ contract EVALocker is ERC721, ERC721Enumerable, Ownable, ReentrancyGuard {
         delete positions[id];
         _burn(id);
 
+        // Mirror-and-waive (same rule as the lock fee): the core vault reverts on a zero-sat payout, so a
+        // burn slice below S/B would brick the exit until maturity. Skip the vault and return that slice
+        // as liquid EVA instead. The vault's backing ratio B/S is monotonically non-decreasing (its only
+        // outflow burns EVA pro-rata), so this waiver is permanently confined to sub-satoshi value.
+        if (burnEva > 0) {
+            uint256 supply = eva.totalSupply();
+            uint256 out = supply == 0 ? 0 : (burnEva * wbtc.balanceOf(address(coreVault))) / supply;
+            if (out == 0) {
+                keepEva += burnEva;
+                burnEva = 0;
+            }
+        }
+
         if (keepEva > 0) {
             eva.safeTransfer(msg.sender, keepEva);
         }

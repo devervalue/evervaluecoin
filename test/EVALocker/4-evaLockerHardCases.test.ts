@@ -85,6 +85,77 @@ describe("EVALocker - hard cases", function () {
     }
   });
 
+  // 1b. Zero-sat burn waiver (audit F-2026-19108): the vault reverts when burnEva * B / S floors to 0.
+  //     earlyExit must never brick on that; the unredeemable slice is returned as liquid EVA instead.
+  describe("early exit when the vault burn would pay zero sats (waiver)", () => {
+    // Setup: B = 1000 WBTC = 1e11 sats, S = 21e6 EVA = 21e24 wei -> threshold S/B = 2.1e14 wei (0.00021 EVA).
+
+    it("dust position can exit at t=0 (100% burn slice, unredeemable): full principal returned, nothing burned", async () => {
+      const dust = 10n ** 14n; // 0.0001 EVA < S/B, so any burn slice of it redeems to 0 sats
+      await locker.connect(alice).lock(0, dust);
+      const supplyBefore = await eva.totalSupply();
+      const aliceEva = await eva.balanceOf(alice.address);
+      const aliceWbtc = await wbtc.balanceOf(alice.address);
+
+      await expect(locker.connect(alice).earlyExit(0))
+        .to.emit(locker, "EarlyExited")
+        .withArgs(0, alice.address, dust, 0, 0);
+
+      expect(await eva.balanceOf(alice.address)).to.equal(aliceEva + dust);
+      expect(await eva.totalSupply()).to.equal(supplyBefore); // no burn happened
+      expect(await wbtc.balanceOf(alice.address)).to.equal(aliceWbtc);
+      expect(await locker.lockedEvaTotal()).to.equal(0);
+      expect(await eva.balanceOf(await locker.getAddress())).to.equal(0); // EVA solvency holds
+    });
+
+    it("normal position inside the thin pre-maturity window exits instead of reverting", async () => {
+      // 1 EVA, 10-day LINEAR tier: 60s before endTime the burn slice is ~6.9e13 wei < S/B -> vault would revert.
+      await locker.connect(alice).lock(0, E18("1"));
+      const p = await locker.positions(0);
+      const target = Number(p.endTime) - 60;
+      await ethers.provider.send("evm_setNextBlockTimestamp", [target]);
+
+      const supplyBefore = await eva.totalSupply();
+      const aliceEva = await eva.balanceOf(alice.address);
+      await expect(locker.connect(alice).earlyExit(0))
+        .to.emit(locker, "EarlyExited")
+        .withArgs(0, alice.address, E18("1"), 0, 0);
+      expect(await eva.balanceOf(alice.address)).to.equal(aliceEva + E18("1"));
+      expect(await eva.totalSupply()).to.equal(supplyBefore);
+    });
+
+    it("control: a burn slice that redeems to >0 sats still goes through the vault", async () => {
+      await locker.connect(alice).lock(0, E18("100"));
+      await increase(5 * DAY); // ~50% burn slice = 50 EVA -> clearly > S/B
+      const supplyBefore = await eva.totalSupply();
+      const aliceWbtc = await wbtc.balanceOf(alice.address);
+      const vaultWbtc = await wbtc.balanceOf(await coreVault.getAddress());
+
+      await locker.connect(alice).earlyExit(0);
+
+      const burned = supplyBefore - (await eva.totalSupply());
+      expect(burned).to.be.greaterThan(0n);
+      const received = (await wbtc.balanceOf(alice.address)) - aliceWbtc;
+      expect(received).to.be.greaterThan(0n);
+      expect(await wbtc.balanceOf(await coreVault.getAddress())).to.equal(vaultWbtc - received);
+    });
+
+    it("the waiver threshold can only shrink: vault ratio B/S is non-decreasing across burns", async () => {
+      const vaultAddr = await coreVault.getAddress();
+      const ratio = async () =>
+        ((await wbtc.balanceOf(vaultAddr)) * 10n ** 36n) / (await eva.totalSupply());
+      const r0 = await ratio();
+      // Several burns of varying size through the locker's early-exit path.
+      for (const amt of ["1000", "12345.678", "0.5", "50000"]) {
+        await locker.connect(bob).lock(0, E18(amt));
+        await increase(1 * DAY);
+        const id = Number((await locker.nextPositionId()) - 1n);
+        await locker.connect(bob).earlyExit(id);
+        expect(await ratio()).to.be.greaterThanOrEqual(r0);
+      }
+    });
+  });
+
   // 2a. Two positions in the same expiry epoch: one early-exits, the other is held to maturity.
   it("same-epoch positions: early-exit then held withdrawal keep totalShares consistent", async () => {
     await locker.connect(alice).lock(0, E18("100")); // id 0
