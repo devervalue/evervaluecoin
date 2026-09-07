@@ -66,9 +66,13 @@ describe("EVALocker — same-epoch expiry guard", function () {
 
   describe("renewal guard", () => {
     it("rejects a sub-day renewal cleanly instead of bricking the position", async () => {
-      await locker.connect(alice).lock(0, E18("100")); // tier 0
+      await locker.connect(alice).lock(0, E18("100")); // tier 0 (10d)
+      // Let it mature: the epoch guard is now only reachable on a matured (or maturity-day) position,
+      // since a live position is caught first by the "must not shorten" guard.
+      await ethers.provider.send("evm_increaseTime", [11 * DAY]);
+      await ethers.provider.send("evm_mine", []);
 
-      // offer far in the future; extend by only 1 hour with keepRemaining=false
+      // offer far in the future; reactivate by only 1 hour with keepRemaining=false
       const offerExpiry = (await nextDayBoundary(1000)) as number;
       await locker.proposeRenewal(0, 3600, false, 0, E8("0.001"), offerExpiry);
 
@@ -86,8 +90,8 @@ describe("EVALocker — same-epoch expiry guard", function () {
     it("accepts a multi-day renewal (guard does not false-positive)", async () => {
       await locker.connect(alice).lock(0, E18("100"));
       const offerExpiry = (await nextDayBoundary(1000)) as number;
-      // extend into a future epoch (5 days) — must succeed
-      await locker.proposeRenewal(0, 5 * DAY, false, 0, E8("0.001"), offerExpiry);
+      // reset from now to 15 days (>= the 10 remaining, so it extends) into a future epoch — must succeed
+      await locker.proposeRenewal(0, 15 * DAY, false, 0, E8("0.001"), offerExpiry);
       await expect(locker.connect(alice).acceptRenewal(0)).to.emit(locker, "RenewalAccepted");
     });
   });

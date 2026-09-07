@@ -494,6 +494,9 @@ contract EVALocker is ERC721, ERC721Enumerable, Ownable, ReentrancyGuard {
      * @param id The position id the offer targets.
      * @param extraDuration Seconds to extend by (see `keepRemaining`).
      * @param keepRemaining true: newEnd = oldEnd + extra; false: newEnd = now + extra at acceptance.
+     *        A renewal can only ever extend: with `false`, `extra` must be at least the time remaining on
+     *        a live position (checked here and, bindingly, at acceptance). Matured positions may be
+     *        reactivated with any future end.
      * @param rewardEva EVA prize compounded into the position on accept (escrowed now).
      * @param rewardWbtc WBTC prize paid instantly on accept (escrowed now).
      * @param offerExpiry Timestamp after which the offer can no longer be accepted.
@@ -511,6 +514,12 @@ contract EVALocker is ERC721, ERC721Enumerable, Ownable, ReentrancyGuard {
         require(!offers[id].active, "offer exists");
         require(offerExpiry > _now(), "bad expiry");
         require(extraDuration > 0 || rewardEva > 0 || rewardWbtc > 0, "empty offer");
+        // Early feedback for the admin: a "reset from now" offer that would shorten a live position can
+        // never be accepted (acceptRenewal enforces newEnd >= endTime), so don't escrow a prize into it.
+        // If this holds at proposal it holds at any later acceptance, so it never blocks a valid offer.
+        if (!keepRemaining) {
+            require(_now() + extraDuration >= positions[id].endTime, "must not shorten");
+        }
 
         if (rewardEva > 0) {
             eva.safeTransferFrom(msg.sender, address(this), rewardEva);
@@ -560,6 +569,12 @@ contract EVALocker is ERC721, ERC721Enumerable, Ownable, ReentrancyGuard {
 
         uint256 newEnd = o.keepRemaining ? p.endTime + o.extraDuration : _now() + o.extraDuration;
         require(newEnd > _now(), "must extend future");
+        // A renewal can only extend, never shorten (audit F-2026-19110). Without this, a "reset from now"
+        // offer on a live position could bring its maturity forward and let it withdraw at 100% with no
+        // early-exit burn — an admin+holder path to a better deal than any other locker can get, which
+        // would also void the soulbound founder tier's commitment. Matured positions (endTime in the
+        // past) always pass, so reactivation is unaffected.
+        require(newEnd >= p.endTime, "must not shorten");
         // Must mature in a future epoch (same reason as in lock): a sub-day renewal ending in the
         // current, already-processed epoch would strand the position's shares and brick it.
         require(newEnd / EPOCH > lastProcessedEpoch, "renewal ends this epoch");

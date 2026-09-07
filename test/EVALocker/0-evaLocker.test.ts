@@ -302,6 +302,68 @@ describe("EVALocker", function () {
       expect(await locker.totalShares()).to.equal(E18("102"));
     });
 
+    // Audit F-2026-19110: a renewal may only extend, never shorten.
+    describe("monotonic end-time guard", () => {
+      it("rejects a reset-from-now offer shorter than the remaining term at proposal time", async () => {
+        await locker.connect(alice).lock(0, E18("100")); // 10d tier
+        await increase(2 * DAY); // 8d remaining
+        await expect(
+          locker.proposeRenewal(0, 2 * DAY, false, 0, E8("1"), (await time()) + 1000)
+        ).to.be.revertedWith("must not shorten");
+        // nothing escrowed
+        expect(await locker.wbtcEscrow()).to.equal(0);
+      });
+
+      it("an offer valid at proposal stays valid at a later acceptance (extra == remaining, accepted a day later)", async () => {
+        // If the offer passes at proposal (now_p + extra >= endTime), it passes at any later acceptance
+        // (now_a >= now_p). Verify: propose with extra == remaining, accept a day later.
+        await locker.connect(alice).lock(0, E18("100"));
+        const pos = await locker.positions(0);
+        const remaining = Number(pos.endTime) - (await time());
+        await locker.proposeRenewal(0, remaining, false, 0, 0, (await time()) + 5 * DAY);
+        await increase(1 * DAY);
+        await expect(locker.connect(alice).acceptRenewal(0)).to.emit(locker, "RenewalAccepted");
+        expect((await locker.positions(0)).endTime).to.be.greaterThanOrEqual(pos.endTime);
+      });
+
+      it("an extension exactly equal to the remaining time is allowed (newEnd == endTime)", async () => {
+        await locker.connect(alice).lock(0, E18("100"));
+        const pos = await locker.positions(0);
+        // keepRemaining=true with extra=0 is an "empty offer" unless it carries a prize; use a prize.
+        await locker.proposeRenewal(0, 0, true, 0, E8("1"), (await time()) + 1000);
+        await expect(locker.connect(alice).acceptRenewal(0)).to.emit(locker, "RenewalAccepted");
+        expect((await locker.positions(0)).endTime).to.equal(pos.endTime);
+      });
+
+      it("keepRemaining=true can never shorten and always passes", async () => {
+        await locker.connect(alice).lock(0, E18("100"));
+        const pos = await locker.positions(0);
+        await locker.proposeRenewal(0, 1, true, 0, 0, (await time()) + 1000); // +1 second
+        await locker.connect(alice).acceptRenewal(0);
+        expect((await locker.positions(0)).endTime).to.equal(pos.endTime + 1n);
+      });
+
+      it("matured positions can still be reactivated with any future end", async () => {
+        await locker.connect(alice).lock(0, E18("100"));
+        await increase(11 * DAY); // matured
+        await locker.proposeRenewal(0, 2 * DAY, false, 0, 0, (await time()) + 1000);
+        await expect(locker.connect(alice).acceptRenewal(0)).to.emit(locker, "RenewalAccepted");
+      });
+
+      it("soulbound weight-0 (founder) tier cannot be released early via a short renewal", async () => {
+        await locker.connect(alice).lock(3, E18("1000")); // tier 3: soulbound, weight 0, 80d
+        await increase(10 * DAY); // 70d remaining
+        // Admin + holder collusion attempt: "renew" to 2 days from now, then withdraw at 100%.
+        await expect(
+          locker.proposeRenewal(0, 2 * DAY, false, 0, 0, (await time()) + 1000)
+        ).to.be.revertedWith("must not shorten");
+        // Position is untouched; withdraw still requires the original maturity.
+        await expect(locker.connect(alice).withdraw(0)).to.be.revertedWith("not matured");
+        await increase(70 * DAY);
+        await expect(locker.connect(alice).withdraw(0)).to.emit(locker, "Withdrawn");
+      });
+    });
+
     it("cancel refunds escrow to the admin", async () => {
       await locker.connect(alice).lock(0, E18("100"));
       await eva.approve(await locker.getAddress(), E18("50"));

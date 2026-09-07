@@ -99,7 +99,9 @@ realize them are described in the sections that follow.
 - **FR-14** Only the admin can propose a renewal, escrowing any EVA/WBTC prize up front; only the
   position owner can accept, and only before the offer expires. Acceptance settles pending rewards,
   extends the term (may reactivate a matured position), compounds the EVA prize into principal,
-  pays the WBTC prize instantly, and restarts the early-exit clock.
+  pays the WBTC prize instantly, and restarts the early-exit clock. A renewal can **never shorten**
+  a position: `newEnd >= endTime` is enforced at acceptance (and pre-checked at proposal), so no
+  admin+holder path exists to bring a maturity forward and skip the early-exit burn.
 - **FR-15** A pending offer is auto-cancelled (escrow refunded to the admin) when the position is
   transferred, withdrawn or early-exited; the admin can also cancel at any time.
 
@@ -260,6 +262,14 @@ pays the WBTC prize instantly, re-derives shares, resets the curve clock, and re
 (subject to the epoch guard). Transfers and closes cancel any open offer and refund the escrow to
 the admin.
 
+**Monotonic end-time (audit F-2026-19110).** `acceptRenewal` requires `newEnd >= endTime`, and
+`proposeRenewal` pre-checks the same for `keepRemaining = false` (if it holds at proposal it holds at
+any later acceptance, so valid offers are never blocked and the admin never escrows a prize into an
+unacceptable one). Without it, a "reset from now" offer on a live 24-month position could set maturity
+two days out and withdraw at 100% with no curve burn — a better deal than any other locker can obtain,
+and one that would void the soulbound founder tier's commitment. Matured positions have `endTime` in
+the past, so reactivation with any future end is unaffected.
+
 ### 4.6 ERC-721 semantics
 `_update` is the single choke point: real transfers require the tier be transferable (soulbound
 enforcement), run `_processExpiries`, settle accrued rewards **to the seller**, and cancel/refund
@@ -321,7 +331,7 @@ deal of an existing position.** Positions snapshot shares, curve, endTime and de
 | `setTierCurve` / `setTierEnabled` / `setLocksPaused` | EVALocker | Future/new locks only; claims, withdrawals and exits are never pausable |
 | `setDistributor` | EVALocker | Redirects future reward flow + fee destination; cannot touch accrued rewards (reserved) |
 | `sweepWbtc` / `sweepEva` | EVALocker | Strays only: reserves `totalUnclaimedRewards + wbtcEscrow` / `lockedEvaTotal + evaEscrow` |
-| `proposeRenewal` / `cancelRenewal` | EVALocker | Prize escrowed up front; holder must opt in; cancel refunds admin only |
+| `proposeRenewal` / `cancelRenewal` | EVALocker | Prize escrowed up front; holder must opt in; cancel refunds admin only; can only extend, never shorten (`newEnd >= endTime`) |
 | `setBaseURI` | EVALocker | Metadata only |
 | `setMinListAmount` | PositionMarket | New listings only |
 | `setCaller` | RevenueRouter | Gates `pay()` |
@@ -359,6 +369,7 @@ renewals):
 | Zero-payout vault burn would revert `earlyExit()` for dust positions / thin pre-maturity window (audit F-2026-19108) | Mirror-and-waive in `earlyExit` (§4.4) |
 | `buy()` had no buyer-side price bound; seller could raise the ask between quote and settlement (audit F-2026-19104) | `buy(id, maxPrice)` (§5) |
 | Router sent WBTC to the active SLS vault without checking its backing token; a non-WBTC vault would trap it permanently (audit F-2026-19107) | Read `backingToken()`, fold to core on mismatch + `SLSTokenMismatch` event; constructor wiring checks (§6) |
+| Renewal with `keepRemaining = false` could shorten a live position and let it withdraw early with no burn (audit F-2026-19110) | `newEnd >= endTime` at acceptance, pre-checked at proposal (§4.5) |
 
 ## 9. Deployment & wiring runbook (order matters)
 
@@ -378,13 +389,13 @@ into `undistributed` (counted as liability, unrecoverable by sweep) until weight
 ## 10. Tests & coverage
 
 `npx hardhat test test/EVALocker/*.test.ts test/PositionMarket/*.test.ts test/RevenueRouter/*.test.ts`
-— **157 passing.** Coverage (`npx hardhat coverage --testfiles "test/{EVALocker,PositionMarket,RevenueRouter}/*.test.ts"`):
+— **168 passing.** Coverage (`npx hardhat coverage --testfiles "test/{EVALocker,PositionMarket,RevenueRouter}/*.test.ts"`):
 
 | Contract | Stmts | Branch | Funcs | Lines | Uncovered |
 |---|---|---|---|---|---|
 | PositionMarket | 100% | 100% | 100% | 100% | — |
-| RevenueRouter | 100% | 97% | 100% | 100% | one defensive SLS-leg branch permutation |
-| EVALocker | ~99% | ~93.4% | ~97% | ~99.6% | mandated `_increaseBalance` override (unreachable without ERC721Consecutive); false-sides of defensive guards (`supply > 0` in `lock`, `supply == 0` arm in `earlyExit`, `received > 0`) |
+| RevenueRouter | 100% | 97.5% | 100% | 100% | one defensive SLS-leg branch permutation |
+| EVALocker | ~99% | ~93.1% | ~97% | ~99.6% | mandated `_increaseBalance` override (unreachable without ERC721Consecutive); false-sides of defensive guards (`supply > 0` in `lock`, `supply == 0` arm in `earlyExit`, `received > 0`); the acceptance-time `must not shorten` revert (unreachable by construction: the proposal-time pre-check implies it, kept as the binding invariant) |
 
 Suite map: `0` core flows · `1` edge cases · `2` branch completion · `3` reentrancy (malicious token
 modes 0–6, incl. `market.buy`) · `4` hard cases · `5` stateful invariant fuzz · `6` transfer/settle ·
