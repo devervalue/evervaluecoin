@@ -22,3 +22,6 @@ ignition/deployments/chain-31337
 
 # Presentation PDF crafting workspace (local only)
 /presentation
+
+# local dry-run address book (deployDemoSepolia on hardhat/localhost)
+/demo-local-dryrun.json

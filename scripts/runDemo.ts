@@ -14,7 +14,7 @@ const fmt8 = (x: bigint) => ethers.formatUnits(x, 8);
 const fmt18 = (x: bigint) => ethers.formatEther(x);
 
 async function main() {
-  const dep = JSON.parse(fs.readFileSync("demo-arbitrum-sepolia.json", "utf8"));
+  const dep = JSON.parse(fs.readFileSync(process.env.DEMO_ADDR_FILE || "demo-arbitrum-sepolia.json", "utf8"));
   const a = dep.contracts;
   const [me] = await ethers.getSigners();
 
@@ -40,10 +40,9 @@ async function main() {
   const id = Number((await locker.nextPositionId()) - 1n);
   console.log(`   position #${id} minted, owner = ${await locker.ownerOf(id)}`);
 
-  // 3) Distribute 5 DWBTC through the router (100% to the locker)
-  console.log("3) Distributing 5 DWBTC via the router...");
-  await (await wbtc.transfer(a.RevenueRouter, E8("5"))).wait();
-  await (await router.pay(E8("5"), 0, 0, 10000, false, 0)).wait();
+  // 3) Daily payment through the router: 0.33 DWBTC split 10/45/45 (router already holds a float)
+  console.log("3) Paying 0.33 DWBTC via the router (10/45/45)...");
+  await (await router.pay(E8("0.33"), 1000, 4500, 4500, true, 0)).wait(); // daily payment, 10/45/45 split, SLS via increaseBacking
   console.log(`   pending on #${id}: ${fmt8(await locker.pending(id))} DWBTC`);
 
   // 4) Fast-forward 30 days, then claim

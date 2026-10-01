@@ -12,7 +12,7 @@ const iso = (t: number | bigint) => new Date(Number(t) * 1000).toISOString();
 // --- tweakable params ---
 const LOCK_TIER = 0; // 3-month tier
 const LOCK_AMOUNT = E18("100000"); // DMO to lock
-const PAY_AMOUNT = E8("20"); // DWBTC to distribute (100% to the locker)
+const PAY_AMOUNT = E8("0.33"); // DWBTC to distribute (production-like daily payment, 10/45/45 split)
 const ADVANCE = 45 * DAY; // seconds to fast-forward
 
 async function tx(label: string, p: Promise<any>) {
@@ -23,7 +23,7 @@ async function tx(label: string, p: Promise<any>) {
 }
 
 async function main() {
-  const a = JSON.parse(fs.readFileSync("demo-arbitrum-sepolia.json", "utf8")).contracts;
+  const a = JSON.parse(fs.readFileSync(process.env.DEMO_ADDR_FILE || "demo-arbitrum-sepolia.json", "utf8")).contracts;
   const [me] = await ethers.getSigners();
   const eva = await ethers.getContractAt("DemoMintableToken", a.DMO);
   const wbtc = await ethers.getContractAt("DemoMintableToken", a.DWBTC);
@@ -46,7 +46,7 @@ async function main() {
   console.log("2) PAYMENT / DISTRIBUTION");
   await tx(`mint ${f8(PAY_AMOUNT)} DWBTC`, wbtc.mint(me.address, PAY_AMOUNT));
   await tx(`fund router with ${f8(PAY_AMOUNT)} DWBTC`, wbtc.transfer(a.RevenueRouter, PAY_AMOUNT));
-  await tx("router.pay -> 100% to locker", router.pay(PAY_AMOUNT, 0, 0, 10000, false, 0));
+  await tx("router.pay 10/45/45 (SLS via increaseBacking)", router.pay(PAY_AMOUNT, 1000, 4500, 4500, true, 0));
   console.log(`   -> pending on #${id} now: ${f8(await locker.pending(id))} DWBTC (its weighted share of the pool)\n`);
 
   // ---- 3. ADVANCE TIME ----

@@ -33,7 +33,7 @@ function check(label: string, ok: boolean, extra = "") {
 }
 
 async function main() {
-  const dep = JSON.parse(fs.readFileSync("demo-arbitrum-sepolia.json", "utf8"));
+  const dep = JSON.parse(fs.readFileSync(process.env.DEMO_ADDR_FILE || "demo-arbitrum-sepolia.json", "utf8"));
   const a = dep.contracts;
   const [me] = await ethers.getSigners();
   const provider = ethers.provider;
@@ -56,7 +56,7 @@ async function main() {
   const locker = await ethers.getContractAt("DemoEVALocker", a.DemoEVALocker);
   const router = await ethers.getContractAt("RevenueRouter", a.RevenueRouter);
   const market = await ethers.getContractAt("PositionMarket", a.PositionMarket);
-  const factory = await ethers.getContractAt("MockSLSFactoryForRouter", a.MockSLSFactory);
+  const factory = await ethers.getContractAt("SLSburnVaultFactory", a.SLSburnVaultFactory);
 
   // --- 1. balances ---
   console.log("\n[1] Caller balances");
@@ -114,7 +114,7 @@ async function main() {
   check("locker.distributor == router", distributor.toLowerCase() === a.RevenueRouter.toLowerCase(), distributor);
   check("router.locker == locker", rLocker.toLowerCase() === a.DemoEVALocker.toLowerCase());
   check("router.coreVault == core", rCore.toLowerCase() === a.EVABurnVault.toLowerCase());
-  check("router.factory == factory", rFactory.toLowerCase() === a.MockSLSFactory.toLowerCase());
+  check("router.factory == factory", rFactory.toLowerCase() === a.SLSburnVaultFactory.toLowerCase());
   check("router.backingToken == DWBTC", rBacking.toLowerCase() === a.DWBTC.toLowerCase());
   check("market.positionNft == locker", mNft.toLowerCase() === a.DemoEVALocker.toLowerCase());
   check("market.wbtc == DWBTC", mWbtc.toLowerCase() === a.DWBTC.toLowerCase());
@@ -172,7 +172,7 @@ async function main() {
     const id = Number((await locker.nextPositionId()) - 1n);
     console.log(`     -> position #${id}`);
     await step("transfer 5 DWBTC to router", () => wbtc.transfer(a.RevenueRouter, E8("5")));
-    await step("router.pay 100% to locker", () => router.pay(E8("5"), 0, 0, 10000, false, 0));
+    await step("router.pay 10/45/45", () => router.pay(E8("0.33"), 1000, 4500, 4500, true, 0));
     console.log(`     pending #${id}: ${f8(await locker.pending(id))} DWBTC`);
     await step("advanceTime 30d", () => locker.advanceTime(30 * DAY));
     await step("claim #" + id, () => locker.claim(id));
