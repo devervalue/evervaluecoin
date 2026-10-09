@@ -25,3 +25,5 @@ ignition/deployments/chain-31337
 
 # local dry-run address book (deployDemoSepolia on hardhat/localhost)
 /demo-local-dryrun.json
+# tester balance plan for scripts/distributeTestBalances.ts
+/recipients.json
