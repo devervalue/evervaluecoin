@@ -1,15 +1,5 @@
 {
-  "lastReplayedDay": "2026-10-18",
-  "replayed": [
-    { "day": "2026-10-09", "amountSats": "33000000", "tx": "smoke test (0.33 vs 0.32034985 real)", "at": "2026-10-09T20:50:00Z" },
-    { "day": "2026-10-10", "amountSats": "29888643", "tx": "0x660f32cc9d410adfa9f56c7b1438616fd62e0dad727d96fc7b18179da7d0eaf8", "at": "2026-10-16T21:00:00Z" },
-    { "day": "2026-10-11", "amountSats": "32997256", "tx": "0xb72d1a3d1ac8725e4149d42fd7cc2dc5bc20f14dea71a1bb24088f922b7782be", "at": "2026-10-16T21:00:00Z" },
-    { "day": "2026-10-12", "amountSats": "31409602", "tx": "0x3c9aa21d6bb00301c8fe322c46510bc7330b5748a27bd3d4d5066088e4a58780", "at": "2026-10-16T21:00:00Z" },
-    { "day": "2026-10-13", "amountSats": "32733549", "tx": "0x83319d2f682a128766b79d9cf2fe516f1d2e2d94d33d26ef70adb9927cae888e", "at": "2026-10-16T21:00:00Z" },
-    { "day": "2026-10-14", "amountSats": "31213503", "tx": "0x56ab36cfb37f0b4992c0f9a5aaf209eff5a312f5cd7adaf7841855e96bff4605", "at": "2026-10-16T21:00:00Z" },
-    { "day": "2026-10-15", "amountSats": "31984377", "tx": "0xcdac1d918e00ddb6ac73dd32816f9b768104707e5844f73389739c5d1cbc8fab", "at": "2026-10-16T21:00:00Z" },
-    { "day": "2026-10-16", "amountSats": "30500935", "tx": "0xb5cf1911034aef62ece9f028afa0fb8f38aadc804c57bf1256c6045cd3b13320", "at": "2026-10-16T21:00:00Z" },
-    { "day": "2026-10-17", "amountSats": "31945696", "tx": "0xf692678e5e773469884313bd61733b6ff9d597026b32c2268d7369b578d54f66", "at": "2026-10-19T19:30:00Z" },
-    { "day": "2026-10-18", "amountSats": "29557007", "tx": "0x83856e0961bf36db9b18b65ec222921f72345506b5436fd8e16d8f1faf9e3baa", "at": "2026-10-19T19:30:00Z" }
-  ]
+  "deployment": "2026-10-28 fresh start — DemoEVALocker 0x37f8d5372C3C5F16B3670F5DF800446C11C43067 (previous deployment history archived with demo-arbitrum-sepolia.2026-10-09.json)",
+  "lastReplayedDay": "2026-10-28",
+  "replayed": []
 }

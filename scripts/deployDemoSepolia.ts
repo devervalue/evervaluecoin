@@ -39,14 +39,14 @@ const ROUTER_FLOAT = E8("30"); // ~90 days of payments at 0.33/day
 const DAILY_PAYMENT = E8("0.33"); // reference only (used by demoOps/runDemo)
 const SPLIT_BPS = { core: 1000, sls: 4500, locker: 4500 }; // 10 / 45 / 45
 
-// Seed positions so the first distribution has weighted shares (never bank into `undistributed`).
-const SEED_POSITIONS: { tier: number; amount: bigint }[] = [
-  { tier: 0, amount: E18("50000") },
-  { tier: 1, amount: E18("50000") },
-  { tier: 2, amount: E18("100000") },
-  { tier: 3, amount: E18("200000") },
-  { tier: 4, amount: E18("1000000") }, // founder tier: soulbound, weight 0
-];
+// Seed positions: ONLY the founder tier (soulbound, weight 0) — 1,000,000 DMO as 10 lots of 100,000.
+// No weighted seed positions: the pool starts with totalShares == 0, so the first locker payment banks
+// into `undistributed` and goes entirely to the first weighted locker (readme §9 ops rule). Testers open
+// the first weighted positions themselves.
+const SEED_POSITIONS: { tier: number; amount: bigint }[] = Array.from({ length: 10 }, () => ({
+  tier: 4,
+  amount: E18("100000"),
+}));
 
 // --- operational knobs ---
 const MIN_LOCK_AMOUNT = E18("1"); // 1 DMO
@@ -133,8 +133,9 @@ async function main() {
   // --- Mint supply to the deployer ---
   console.log("\n[7/7] Minting");
   await (await eva.mint(deployer.address, SUPPLY_DMO)).wait();
-  await (await wbtc.mint(deployer.address, CORE_BACKING + SLS_BACKING + ROUTER_FLOAT + E8("100"))).wait();
-  console.log(`  minted ${ethers.formatUnits(SUPPLY_DMO, 18)} DMO and DWBTC for vaults/router (+100 spare) to deployer`);
+  const DWBTC_SPARE = E8("100000"); // reserve for tester funding (fundTester / distributeTestBalances)
+  await (await wbtc.mint(deployer.address, CORE_BACKING + SLS_BACKING + ROUTER_FLOAT + DWBTC_SPARE)).wait();
+  console.log(`  minted ${ethers.formatUnits(SUPPLY_DMO, 18)} DMO and DWBTC for vaults/router (+${ethers.formatUnits(DWBTC_SPARE, 8)} spare) to deployer`);
 
   // --- Wiring ---
   console.log("\n🔧 Wiring");

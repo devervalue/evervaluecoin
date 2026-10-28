@@ -2,16 +2,16 @@
   "network": "arbitrumSepolia",
   "chainId": 421614,
   "deployer": "0x0Fdd62E711Ad775D4Bac0E24CF7EFBd1518c1D0C",
-  "deployedAt": "2026-10-09T20:44:00.727Z",
+  "deployedAt": "2026-10-28T23:09:46.973Z",
   "contracts": {
-    "DMO": "0xA11C761BA3f038a301E4F892399C300DC4c222FF",
-    "DWBTC": "0x1929044B3e9238Bf2835ed08912fE02338d04248",
-    "EVABurnVault": "0xAC67F3024f19bc6d1fDE9Ab9323c91548a839F61",
-    "DemoEVALocker": "0x69c84FA7dc227b66dA3088f9c4702E00Fc93F222",
-    "SLSburnVaultFactory": "0x828874c152bA710a2E0De0447634B072fDb1f457",
-    "SLSburnVault": "0x604e5075c003f65c0FEA4E62A88D09aA57506124",
-    "RevenueRouter": "0x51C8D05c36926E617cf6352751f7557743AA75CA",
-    "PositionMarket": "0x6E01CA4f7f219318eb0430b40F312F89F39BD15A"
+    "DMO": "0xa9EB523A42DF16cb0118f0126FAE987A73F231d0",
+    "DWBTC": "0xa61Ee9E2036828Eab6F6FD8f0B53b27fe30e5210",
+    "EVABurnVault": "0x992b206b27a619c23608e4f1c29e01560C3c822b",
+    "DemoEVALocker": "0x37f8d5372C3C5F16B3670F5DF800446C11C43067",
+    "SLSburnVaultFactory": "0x7e583822842A6AB72E6E411b58E85B133c0Ea461",
+    "SLSburnVault": "0xFBdDc4Cbf5EBE9D1bc249199637faFA154BBb7bC",
+    "RevenueRouter": "0xAf275fA3F79920c26f93dcE3E0787431b13a5cDE",
+    "PositionMarket": "0xCCCc98B80BFCc03Cb92DfFC743c271fd94624C81"
   },
   "tiers": {
     "weights": [
@@ -62,24 +62,44 @@
     "routerFloat": "3000000000",
     "positions": [
       {
-        "tier": 0,
-        "amount": "50000000000000000000000"
-      },
-      {
-        "tier": 1,
-        "amount": "50000000000000000000000"
-      },
-      {
-        "tier": 2,
+        "tier": 4,
         "amount": "100000000000000000000000"
       },
       {
-        "tier": 3,
-        "amount": "200000000000000000000000"
+        "tier": 4,
+        "amount": "100000000000000000000000"
       },
       {
         "tier": 4,
-        "amount": "1000000000000000000000000"
+        "amount": "100000000000000000000000"
+      },
+      {
+        "tier": 4,
+        "amount": "100000000000000000000000"
+      },
+      {
+        "tier": 4,
+        "amount": "100000000000000000000000"
+      },
+      {
+        "tier": 4,
+        "amount": "100000000000000000000000"
+      },
+      {
+        "tier": 4,
+        "amount": "100000000000000000000000"
+      },
+      {
+        "tier": 4,
+        "amount": "100000000000000000000000"
+      },
+      {
+        "tier": 4,
+        "amount": "100000000000000000000000"
+      },
+      {
+        "tier": 4,
+        "amount": "100000000000000000000000"
       }
     ]
   }
